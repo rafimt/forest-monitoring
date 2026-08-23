@@ -9,11 +9,23 @@ INDEX_BANDS = ["NDVI", "EVI", "SAVI", "NDRE", "GNDVI"]
 
 
 def init_ee():
-    """Initialize Earth Engine once. Safe to call on every Streamlit rerun."""
+    """Initialize Earth Engine once. Safe to call on every Streamlit rerun.
+
+    Deployment: if a service-account email + key JSON are provided (via
+    secrets), authenticate with them (no browser). Otherwise fall back to the
+    locally-saved interactive credentials from `earthengine authenticate`.
+    """
     global _initialized
-    if not _initialized:
+    if _initialized:
+        return
+    if settings.gee_service_account and settings.gee_key_json:
+        creds = ee.ServiceAccountCredentials(
+            settings.gee_service_account, key_data=settings.gee_key_json
+        )
+        ee.Initialize(creds, project=settings.gee_project)
+    else:
         ee.Initialize(project=settings.gee_project)
-        _initialized = True
+    _initialized = True
 
 
 def gdf_to_ee_geometry(gdf) -> ee.Geometry:

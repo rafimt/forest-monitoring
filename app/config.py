@@ -1,10 +1,36 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Streamlit is optional here: the ingest script runs outside Streamlit.
+try:
+    import streamlit as st
+except Exception:  # pragma: no cover
+    st = None
 
 
-class Settings(BaseSettings):
-    database_url: str
-    gee_project: str
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+def _get(key: str, default=None):
+    """Read config from Streamlit secrets first (cloud), then .env (local)."""
+    if st is not None:
+        try:
+            if key in st.secrets:
+                return st.secrets[key]
+        except Exception:
+            pass  # no secrets.toml locally -> fall through to env
+    return os.getenv(key, default)
+
+
+class Settings:
+    # Cloud Postgres/PostGIS URL, or local Docker URL.
+    database_url = _get("DATABASE_URL")
+    gee_project = _get("GEE_PROJECT")
+
+    # For deployment: a GEE service account instead of interactive auth.
+    # Leave these unset locally (interactive `earthengine authenticate` is used).
+    gee_service_account = _get("GEE_SERVICE_ACCOUNT")   # the client_email
+    gee_key_json = _get("GEE_KEY_JSON")                 # the key file's JSON, as a string
 
 
 settings = Settings()
