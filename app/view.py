@@ -84,29 +84,28 @@ if series:
 
 st.divider()
 
-# ── Map + chart side by side (map wider) ─────────────────────
-left, right = st.columns([3, 2])
+# ── Map (full width) ─────────────────────────────────────────
+st.subheader("Area")
+basemap = st.selectbox("Basemap", list(BASEMAPS.keys()))
+geom = shape(json.loads(geojson_str))
+m = make_map(basemap=basemap)
+folium.GeoJson(
+    geojson_str, name="AOI",
+    style_function=lambda _: {"color": "#c1272d", "weight": 2, "fillOpacity": 0.1},
+).add_to(m)
+minx, miny, maxx, maxy = geom.bounds
+m.fit_bounds([[miny, minx], [maxy, maxx]])
+# returned_objects=[] -> map interactions (pan/zoom) don't rerun the script.
+st_folium(m, use_container_width=True, height=560, returned_objects=[])
 
-with left:
-    st.subheader("Area")
-    basemap = st.selectbox("Basemap", list(BASEMAPS.keys()))
-    geom = shape(json.loads(geojson_str))
-    m = make_map(basemap=basemap)
-    folium.GeoJson(
-        geojson_str, name="AOI",
-        style_function=lambda _: {"color": "#c1272d", "weight": 2, "fillOpacity": 0.1},
-    ).add_to(m)
-    minx, miny, maxx, maxy = geom.bounds
-    m.fit_bounds([[miny, minx], [maxy, maxx]])
-    # returned_objects=[] -> map interactions (pan/zoom) don't rerun the script.
-    st_folium(m, use_container_width=True, height=560, returned_objects=[])
+st.divider()
 
-with right:
-    st.subheader(f"{idx_choice} over time")
-    if series:
-        st.plotly_chart(vi_line_chart(series, index=index), use_container_width=True)
-    else:
-        st.info("No series stored for this AOI.")
+# ── Chart (full width, under the map) ────────────────────────
+st.subheader(f"{idx_choice} over time")
+if series:
+    st.plotly_chart(vi_line_chart(series, index=index), use_container_width=True)
+else:
+    st.info("No series stored for this AOI.")
 
 # ── Raw data ─────────────────────────────────────────────────
 if series:
