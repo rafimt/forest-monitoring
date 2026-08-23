@@ -65,12 +65,21 @@ st.divider()
 
 # ── KPI cards (for the selected index) ───────────────────────
 if series:
-    vals = [r[index] for r in series if r[index] is not None]
+    pts = [(r["date"], r[index]) for r in series if r[index] is not None]
+    vals = [v for _, v in pts]
+    peak_date, peak_val = max(pts, key=lambda p: p[1])
+    min_date, min_val = min(pts, key=lambda p: p[1])
+
+    def _month(d):  # "2023-09" or "2023-09-01" -> "Sep 2023"
+        return pd.to_datetime(d).strftime("%b %Y")
+
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Months", len(vals))
     c2.metric(f"Avg {idx_choice}", f"{sum(vals)/len(vals):.3f}")
-    c3.metric(f"Peak {idx_choice}", f"{max(vals):.3f}")
-    c4.metric(f"Min {idx_choice}", f"{min(vals):.3f}")
+    c3.metric(f"Peak {idx_choice}", f"{peak_val:.3f}",
+              delta=_month(peak_date), delta_color="off")
+    c4.metric(f"Min {idx_choice}", f"{min_val:.3f}",
+              delta=_month(min_date), delta_color="off")
 
 st.divider()
 
