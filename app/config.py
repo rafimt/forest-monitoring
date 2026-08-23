@@ -15,10 +15,11 @@ def _get(key: str, default=None):
     """Read config from Streamlit secrets first (cloud), then .env (local)."""
     if st is not None:
         try:
-            if key in st.secrets:
-                return st.secrets[key]
+            val = st.secrets[key]     # direct access; KeyError if absent
+            if val is not None:
+                return val
         except Exception:
-            pass  # no secrets.toml locally -> fall through to env
+            pass  # no secrets.toml / key not set -> fall through to env
     return os.getenv(key, default)
 
 
