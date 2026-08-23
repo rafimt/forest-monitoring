@@ -76,10 +76,11 @@ if series:
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Months", len(vals))
     c2.metric(f"Avg {idx_choice}", f"{sum(vals)/len(vals):.3f}")
+    # Triangle glyph shows direction; delta_color off keeps the date neutral.
     c3.metric(f"Peak {idx_choice}", f"{peak_val:.3f}",
-              delta=_month(peak_date), delta_color="off")
+              delta=f"▲ {_month(peak_date)}", delta_color="off")
     c4.metric(f"Min {idx_choice}", f"{min_val:.3f}",
-              delta=_month(min_date), delta_color="off")
+              delta=f"▼ {_month(min_date)}", delta_color="off")
 
 st.divider()
 

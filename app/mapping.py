@@ -3,8 +3,6 @@ import folium
 # Selectable basemaps: label -> (tiles url/name, attribution)
 BASEMAPS = {
     "OpenStreetMap": ("OpenStreetMap", None),
-    "Carto Light": ("CartoDB positron", None),
-    "Carto Dark": ("CartoDB dark_matter", None),
     "Esri Satellite": (
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         "Tiles © Esri",
