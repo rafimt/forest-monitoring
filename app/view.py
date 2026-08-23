@@ -15,6 +15,22 @@ from app.db import query, load_series, load_aoi_geojson
 from app.mapping import make_map, BASEMAPS
 from app.charts import vi_line_chart, INDICES
 
+
+# Cache DB reads so panning/zooming the map doesn't re-query Supabase.
+@st.cache_data(ttl=600, show_spinner=False)
+def get_aois():
+    return query("SELECT id, name FROM aoi ORDER BY name")
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def get_series(aoi_id):
+    return load_series(aoi_id)
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def get_geojson(aoi_id):
+    return load_aoi_geojson(aoi_id)
+
 st.set_page_config(page_title="Vegetation Index Viewer", page_icon="🌱", layout="wide")
 st.title("🌱 Vegetation Index Viewer")
 st.markdown("Multi-index vegetation monitoring — **Sentinel-2** via Earth Engine, cached in **PostGIS**.")
@@ -23,7 +39,7 @@ st.markdown("Multi-index vegetation monitoring — **Sentinel-2** via Earth Engi
 DISPLAY = {"dipto_cashew": "Cashew field"}
 
 # ── Controls ─────────────────────────────────────────────────
-aois = query("SELECT id, name FROM aoi ORDER BY name")
+aois = get_aois()
 if aois.empty:
     st.warning("No AOIs stored yet. Run the ingest script first.")
     st.stop()
@@ -42,8 +58,8 @@ st.caption(INDICES[index][1])   # description of the chosen index
 st.session_state["aoi_id"] = aoi_id
 
 # ── Load data from PostGIS ───────────────────────────────────
-geojson_str = load_aoi_geojson(aoi_id)
-series = load_series(aoi_id)
+geojson_str = get_geojson(aoi_id)
+series = get_series(aoi_id)
 
 st.divider()
 
@@ -72,7 +88,8 @@ with left:
     ).add_to(m)
     minx, miny, maxx, maxy = geom.bounds
     m.fit_bounds([[miny, minx], [maxy, maxx]])
-    st_folium(m, use_container_width=True, height=560)
+    # returned_objects=[] -> map interactions (pan/zoom) don't rerun the script.
+    st_folium(m, use_container_width=True, height=560, returned_objects=[])
 
 with right:
     st.subheader(f"{idx_choice} over time")
