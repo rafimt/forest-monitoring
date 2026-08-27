@@ -28,10 +28,15 @@ def init_ee():
     _initialized = True
 
 
-def gdf_to_ee_geometry(gdf) -> ee.Geometry:
-    """Convert a geopandas GeoDataFrame (EPSG:4326) to an ee.Geometry."""
+def gdf_to_ee_geometry(gdf, simplify_m=10) -> ee.Geometry:
+    """Convert a geopandas GeoDataFrame (EPSG:4326) to an ee.Geometry.
+    Dissolves all features and lightly simplifies (default ~10 m) so very
+    complex multi-part geometries don't overload Earth Engine aggregations."""
     merged = gdf.unary_union
-    return ee.Geometry(merged.__geo_interface__)
+    geom = ee.Geometry(merged.__geo_interface__)
+    if simplify_m:
+        geom = geom.simplify(maxError=simplify_m)
+    return geom
 
 
 def mask_s2_clouds(image):
@@ -80,17 +85,19 @@ def build_index_collection(aoi, start, end, max_cloud=40):
     )
 
 
-def vi_monthly_series(aoi, start, end, max_cloud=40, scale=10):
+def vi_monthly_series(aoi, start, end, max_cloud=40, scale=10, batch_months=24):
     """[{date:'YYYY-MM', n_images, ndvi, evi, savi, ndre, gndvi}, ...] — one
     point per month. Monthly = median composite of the month, then spatial
-    median over the AOI, for every index."""
+    median over the AOI, for every index.
+
+    Months are pulled in batches (batch_months) so heavy geometries don't hit
+    Earth Engine's 'Too many concurrent aggregations' limit."""
     start_date = ee.Date(start)
     end_date = ee.Date(end)
 
     base = build_index_collection(aoi, start, end, max_cloud).select(INDEX_BANDS)
 
-    n_months = end_date.difference(start_date, "month").ceil()
-    months = ee.List.sequence(0, n_months.subtract(1))
+    total_months = int(end_date.difference(start_date, "month").ceil().getInfo())
 
     def one_month(m):
         m = ee.Number(m)
@@ -114,6 +121,7 @@ def vi_monthly_series(aoi, start, end, max_cloud=40, scale=10):
             geometry=aoi,
             scale=scale,
             maxPixels=1e9,
+            tileScale=4,          # spreads work into more tiles -> lower concurrency
         )
 
         props = {"date": s.format("YYYY-MM"), "n_images": count}
@@ -121,8 +129,13 @@ def vi_monthly_series(aoi, start, end, max_cloud=40, scale=10):
             props[b] = stats.get(b)
         return ee.Feature(None, props)
 
-    fc = ee.FeatureCollection(months.map(one_month))
-    features = fc.getInfo()["features"]
+    # Process the month indices in batches to bound concurrent aggregations.
+    features = []
+    for lo in range(0, total_months, batch_months):
+        hi = min(lo + batch_months, total_months)
+        month_idxs = ee.List.sequence(lo, hi - 1)
+        fc = ee.FeatureCollection(month_idxs.map(one_month))
+        features.extend(fc.getInfo()["features"])
 
     rows = []
     for f in features:

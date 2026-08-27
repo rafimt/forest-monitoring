@@ -27,6 +27,9 @@ JOBS = [
      "start": "2017-03-28", "end": "2026-01-01"},
     {"input": "Woodlot.gpkg", "layer": None, "name": "Woodlot",
      "start": "2017-03-28", "end": "2026-01-01"},
+    {"input": "Coxbazar_south_plantation.gpkg", "layer": None,
+     "name": "coxbazar_south_plantation",
+     "start": "2017-03-28", "end": "2026-01-01"},
 ]
 MAX_CLOUD = 40              # max cloud % per scene
 BUFFER_M = 500             # point/line AOIs are buffered to this radius (meters)

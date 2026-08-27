@@ -36,7 +36,11 @@ st.title("🌱 Vegetation Index Viewer")
 st.markdown("Multi-index vegetation monitoring — **Sentinel-2** via Earth Engine, cached in **PostGIS**.")
 
 # Friendly display names for stored AOIs.
-DISPLAY = {"dipto_cashew": "Cashew field"}
+DISPLAY = {
+    "dipto_cashew": "Cashew field",
+    "Coxbazar": "Cox's Bazar",
+    "coxbazar_south_plantation": "Cox's Bazar South Plantation",
+}
 
 # ── Controls ─────────────────────────────────────────────────
 aois = get_aois()
