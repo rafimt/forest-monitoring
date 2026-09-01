@@ -105,11 +105,14 @@ else:
 # ── Plot attributes (depends on plot, not index) ─────────────
 if attrs:
     st.subheader("Plot details")
+    area = f"{attrs.get('area_ha'):.2f}" if attrs.get("area_ha") else "—"
+    # Markdown (not st.metric) so long text like "Rajapalong Beat" wraps
+    # instead of being truncated with an ellipsis.
     a1, a2, a3, a4 = st.columns(4)
-    a1.metric("Area (ha)", f"{attrs.get('area_ha'):.2f}" if attrs.get("area_ha") else "—")
-    a2.metric("Plant year", attrs.get("plant_year") or "—")
-    a3.metric("Beat", attrs.get("beat_name") or "—")
-    a4.metric("Village", attrs.get("village") or "—")
+    a1.markdown(f"**Area (ha)**<br>{area}", unsafe_allow_html=True)
+    a2.markdown(f"**Plant year**<br>{attrs.get('plant_year') or '—'}", unsafe_allow_html=True)
+    a3.markdown(f"**Beat**<br>{attrs.get('beat_name') or '—'}", unsafe_allow_html=True)
+    a4.markdown(f"**Village**<br>{attrs.get('village') or '—'}", unsafe_allow_html=True)
     st.caption(f"Type: {attrs.get('plant_type') or '—'}  ·  "
                f"Range: {attrs.get('range_name') or '—'}  ·  "
                f"Division: {attrs.get('division') or '—'}")

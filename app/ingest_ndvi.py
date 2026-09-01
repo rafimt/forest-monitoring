@@ -20,16 +20,16 @@ from app.db import save_aoi, save_series
 # layer: GeoPackage layer name, or None for single-layer
 JOBS = [
     {"input": "dipto_cashew.gpkg", "layer": None, "name": "dipto_cashew",
-     "start": "2017-03-28", "end": "2026-01-01"},
+     "start": "2017-03-28", "end": "2026-09-01"},
     {"input": "Coxbazar.gpkg", "layer": None, "name": "Coxbazar",
-     "start": "2017-03-28", "end": "2026-01-01"},
+     "start": "2017-03-28", "end": "2026-09-01"},
     {"input": "Mangrove.gpkg", "layer": None, "name": "Mangrove",
-     "start": "2017-03-28", "end": "2026-01-01"},
+     "start": "2017-03-28", "end": "2026-09-01"},
     {"input": "Woodlot.gpkg", "layer": None, "name": "Woodlot",
-     "start": "2017-03-28", "end": "2026-01-01"},
+     "start": "2017-03-28", "end": "2026-09-01"},
     {"input": "Coxbazar_south_plantation.gpkg", "layer": None,
      "name": "coxbazar_south_plantation",
-     "start": "2017-03-28", "end": "2026-01-01"},
+     "start": "2017-03-28", "end": "2026-09-01"},
 ]
 MAX_CLOUD = 40              # max cloud % per scene
 BUFFER_M = 500             # point/line AOIs are buffered to this radius (meters)
