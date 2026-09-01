@@ -151,7 +151,7 @@ with left:
 
     if plots_fc:
         # Draw all plots; highlight the selected one in red, others gray.
-        fc = json.loads(plots_fc)
+        fc = plots_fc if isinstance(plots_fc, dict) else json.loads(plots_fc)
 
         def _style(feat):
             sel = feat["properties"]["id"] == plot_id

@@ -127,6 +127,7 @@ def load_plot_geojson(plot_id: int):
 def load_all_plots_geojson(aoi_name: str):
     """All plots of an AOI as a GeoJSON FeatureCollection (id + label props)."""
     with engine.begin() as conn:
+        # ::text so the driver returns a JSON string (not a parsed dict).
         return conn.execute(text("""
             SELECT json_build_object(
                 'type','FeatureCollection',
@@ -135,7 +136,7 @@ def load_all_plots_geojson(aoi_name: str):
                     'geometry', ST_AsGeoJSON(p.geom)::json,
                     'properties', json_build_object('id', p.id, 'name', p.plot_name)
                 )), '[]'::json)
-            )
+            )::text
             FROM plot p JOIN aoi a ON a.id = p.aoi_id
             WHERE a.name = :n;
         """), {"n": aoi_name}).scalar()
