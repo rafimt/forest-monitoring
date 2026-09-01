@@ -79,6 +79,68 @@ def list_aois():
     with engine.begin() as conn:
         return conn.execute(text("SELECT id, name FROM aoi ORDER BY id DESC;")).all()
     
+def list_plots(aoi_name: str):
+    """List plots for an AOI (by AOI name), ordered by label."""
+    with engine.begin() as conn:
+        return conn.execute(text("""
+            SELECT p.id, p.plot_name
+            FROM plot p JOIN aoi a ON a.id = p.aoi_id
+            WHERE a.name = :n
+            ORDER BY p.plot_name;
+        """), {"n": aoi_name}).all()
+
+
+def load_plot_attrs(plot_id: int):
+    """Return one plot's attribute row as a dict (no geometry)."""
+    with engine.begin() as conn:
+        row = conn.execute(text("""
+            SELECT plot_name, area_ha, plant_year, plant_type, ecozone,
+                   division, range_name, beat_name, village, union_name,
+                   patches, journal_id, remarks
+            FROM plot WHERE id = :id;
+        """), {"id": plot_id}).mappings().first()
+    return dict(row) if row else {}
+
+
+def load_plot_series(plot_id: int):
+    """Load a plot's monthly multi-index series, by date."""
+    with engine.begin() as conn:
+        rows = conn.execute(text("""
+            SELECT image_date, median_ndvi, evi, savi, ndre, gndvi
+            FROM ndvi_series WHERE plot_id = :id ORDER BY image_date;
+        """), {"id": plot_id}).all()
+    return [
+        {"date": str(r.image_date), "ndvi": r.median_ndvi, "evi": r.evi,
+         "savi": r.savi, "ndre": r.ndre, "gndvi": r.gndvi, "n_images": None}
+        for r in rows
+    ]
+
+
+def load_plot_geojson(plot_id: int):
+    with engine.begin() as conn:
+        return conn.execute(
+            text("SELECT ST_AsGeoJSON(geom) FROM plot WHERE id = :id;"),
+            {"id": plot_id},
+        ).scalar()
+
+
+def load_all_plots_geojson(aoi_name: str):
+    """All plots of an AOI as a GeoJSON FeatureCollection (id + label props)."""
+    with engine.begin() as conn:
+        return conn.execute(text("""
+            SELECT json_build_object(
+                'type','FeatureCollection',
+                'features', COALESCE(json_agg(json_build_object(
+                    'type','Feature',
+                    'geometry', ST_AsGeoJSON(p.geom)::json,
+                    'properties', json_build_object('id', p.id, 'name', p.plot_name)
+                )), '[]'::json)
+            )
+            FROM plot p JOIN aoi a ON a.id = p.aoi_id
+            WHERE a.name = :n;
+        """), {"n": aoi_name}).scalar()
+
+
 def load_aoi_geojson(aoi_id):
     with engine.begin() as conn:
         return conn.execute(
