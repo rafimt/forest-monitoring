@@ -153,10 +153,9 @@ with left:
 
         def _style(feat):
             sel = feat["properties"]["id"] in sel_ids
-            return {"color": "#c1272d" if sel else "#666",
-                    "weight": 2 if sel else 1,
-                    "fillColor": "#ff6b6b" if sel else "#999",
-                    "fillOpacity": 0.5 if sel else 0.12}
+            return {"color": "#c1272d" if sel else "#888",
+                    "weight": 3 if sel else 1,
+                    "fill": False, "fillOpacity": 0}
 
         folium.GeoJson(
             fc, name="Plots", style_function=_style,
