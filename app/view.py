@@ -56,7 +56,6 @@ def get_plot_attrs(plot_id):
 
 st.set_page_config(page_title="Vegetation Index Viewer", page_icon="🌱", layout="wide")
 st.title("🌱 Vegetation Index Viewer")
-st.markdown("Multi-index vegetation monitoring — **Sentinel-2** via Earth Engine, cached in **PostGIS**.")
 
 # Friendly display names for stored AOIs.
 DISPLAY = {
