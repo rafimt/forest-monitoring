@@ -71,17 +71,14 @@ if aois.empty:
     st.warning("No AOIs stored yet. Run the ingest script first.")
     st.stop()
 
-c_aoi, c_idx = st.columns([2, 2])
+idx_labels = {v[0]: k for k, v in INDICES.items()}   # "NDVI" -> "ndvi"
+
+c_aoi, c_plot = st.columns([2, 2])
 with c_aoi:
     labels = {DISPLAY.get(r["name"], r["name"]): r.id for _, r in aois.iterrows()}
     aoi_choice = st.selectbox("Area of interest", list(labels.keys()))
     aoi_id = labels[aoi_choice]
-with c_idx:
-    idx_labels = {v[0]: k for k, v in INDICES.items()}   # "NDVI" -> "ndvi"
-    idx_choice = st.selectbox("Vegetation index", list(idx_labels.keys()))
-    index = idx_labels[idx_choice]
 
-st.caption(INDICES[index][1])   # description of the chosen index
 st.session_state["aoi_id"] = aoi_id
 
 # ── Plot mode: if this AOI has individual plots, let the user pick one ──
@@ -91,7 +88,8 @@ plot_id = None
 plots_fc = None
 if plots:
     plot_labels = {name: pid for pid, name in plots}
-    plot_choice = st.selectbox(f"Plot ({len(plots)} total)", list(plot_labels.keys()))
+    with c_plot:
+        plot_choice = st.selectbox(f"Plot ({len(plots)} total)", list(plot_labels.keys()))
     plot_id = plot_labels[plot_choice]
     plots_fc = get_plots_geojson(aoi_name)
 
@@ -105,9 +103,7 @@ else:
     series = get_series(aoi_id)
     attrs = None
 
-st.divider()
-
-# ── Plot attributes ──────────────────────────────────────────
+# ── Plot attributes (depends on plot, not index) ─────────────
 if attrs:
     st.subheader("Plot details")
     a1, a2, a3, a4 = st.columns(4)
@@ -118,30 +114,15 @@ if attrs:
     st.caption(f"Type: {attrs.get('plant_type') or '—'}  ·  "
                f"Range: {attrs.get('range_name') or '—'}  ·  "
                f"Division: {attrs.get('division') or '—'}")
-    st.divider()
-
-# ── KPI cards (for the selected index) ───────────────────────
-if series:
-    pts = [(r["date"], r[index]) for r in series if r[index] is not None]
-    vals = [v for _, v in pts]
-    peak_date, peak_val = max(pts, key=lambda p: p[1])
-    min_date, min_val = min(pts, key=lambda p: p[1])
-
-    def _month(d):  # "2023-09" or "2023-09-01" -> "Sep 2023"
-        return pd.to_datetime(d).strftime("%b %Y")
-
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Months", len(vals))
-    c2.metric(f"Avg {idx_choice}", f"{sum(vals)/len(vals):.3f}")
-    # Date shown as a caption (no delta -> no extra Streamlit arrow).
-    c3.metric(f"Peak {idx_choice}", f"{peak_val:.3f}")
-    c3.caption(f"▲ {_month(peak_date)}")
-    c4.metric(f"Min {idx_choice}", f"{min_val:.3f}")
-    c4.caption(f"▼ {_month(min_date)}")
 
 st.divider()
 
-# ── Map + chart side by side ─────────────────────────────────
+
+def _month(d):  # "2023-09" or "2023-09-01" -> "Sep 2023"
+    return pd.to_datetime(d).strftime("%b %Y")
+
+
+# ── Map + index panel side by side ───────────────────────────
 left, right = st.columns(2)
 
 with left:
@@ -164,7 +145,6 @@ with left:
             fc, name="Plots", style_function=_style,
             tooltip=folium.GeoJsonTooltip(fields=["name"], aliases=[""]),
         ).add_to(m)
-        # Fit to the selected plot.
         sel = [f for f in fc["features"] if f["properties"]["id"] == plot_id][0]
         b = shape(sel["geometry"]).bounds
         m.fit_bounds([[b[1], b[0]], [b[3], b[2]]])
@@ -177,28 +157,45 @@ with left:
         minx, miny, maxx, maxy = geom.bounds
         m.fit_bounds([[miny, minx], [maxy, maxx]])
 
-    # Stable key -> the map component updates in place instead of remounting
-    # (remounting on every rerun is what causes the blink). returned_objects=[]
-    # -> pan/zoom don't rerun the script.
+    # Stable key -> the map updates in place instead of remounting (no blink).
     st_folium(m, use_container_width=True, height=520,
               returned_objects=[], key="aoimap")
 
 with right:
-    st.subheader(f"{idx_choice} over time")
-    if series:
-        st.plotly_chart(vi_line_chart(series, index=index), use_container_width=True)
-    else:
-        st.info("No series stored for this AOI.")
+    # Fragment: changing the index reruns ONLY this block, never the map.
+    @st.fragment
+    def index_panel():
+        idx_choice = st.selectbox("Vegetation index", list(idx_labels.keys()))
+        index = idx_labels[idx_choice]
+        st.caption(INDICES[index][1])
 
-# ── Raw data ─────────────────────────────────────────────────
-if series:
-    tbl = pd.DataFrame(series)
-    tbl["date"] = pd.to_datetime(tbl["date"]).dt.strftime("%b %Y")
-    for col in ["ndvi", "evi", "savi", "ndre", "gndvi"]:
-        tbl[col] = tbl[col].round(3)
-    tbl = tbl.rename(columns={
-        "date": "Month", "ndvi": "NDVI", "evi": "EVI", "savi": "SAVI",
-        "ndre": "NDRE", "gndvi": "GNDVI", "n_images": "Images",
-    })
-    with st.expander("Show data table"):
-        st.dataframe(tbl, use_container_width=True, hide_index=True)
+        if not series:
+            st.info("No series stored for this selection.")
+            return
+
+        pts = [(r["date"], r[index]) for r in series if r[index] is not None]
+        vals = [v for _, v in pts]
+        peak_date, peak_val = max(pts, key=lambda p: p[1])
+        min_date, min_val = min(pts, key=lambda p: p[1])
+
+        k1, k2, k3 = st.columns(3)
+        k1.metric(f"Avg {idx_choice}", f"{sum(vals)/len(vals):.3f}")
+        k2.metric("Peak", f"{peak_val:.3f}")
+        k2.caption(f"▲ {_month(peak_date)}")
+        k3.metric("Min", f"{min_val:.3f}")
+        k3.caption(f"▼ {_month(min_date)}")
+
+        st.plotly_chart(vi_line_chart(series, index=index), use_container_width=True)
+
+        tbl = pd.DataFrame(series)
+        tbl["date"] = pd.to_datetime(tbl["date"]).dt.strftime("%b %Y")
+        for col in ["ndvi", "evi", "savi", "ndre", "gndvi"]:
+            tbl[col] = tbl[col].round(3)
+        tbl = tbl.rename(columns={
+            "date": "Month", "ndvi": "NDVI", "evi": "EVI", "savi": "SAVI",
+            "ndre": "NDRE", "gndvi": "GNDVI", "n_images": "Images",
+        })
+        with st.expander("Show data table"):
+            st.dataframe(tbl, use_container_width=True, hide_index=True)
+
+    index_panel()
