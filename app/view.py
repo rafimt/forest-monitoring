@@ -177,8 +177,11 @@ with left:
         minx, miny, maxx, maxy = geom.bounds
         m.fit_bounds([[miny, minx], [maxy, maxx]])
 
-    # returned_objects=[] -> map interactions (pan/zoom) don't rerun the script.
-    st_folium(m, use_container_width=True, height=520, returned_objects=[])
+    # Stable key -> the map component updates in place instead of remounting
+    # (remounting on every rerun is what causes the blink). returned_objects=[]
+    # -> pan/zoom don't rerun the script.
+    st_folium(m, use_container_width=True, height=520,
+              returned_objects=[], key="aoimap")
 
 with right:
     st.subheader(f"{idx_choice} over time")
