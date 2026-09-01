@@ -18,7 +18,7 @@ from app.db import engine
 # ── CONFIG ───────────────────────────────────────────────────
 SHP = "data/Plantation_CoxSouth_2019_2022/Plantation_CoxSouth_2019_2022.shp"
 AOI_NAME = "coxbazar_south_plantation"   # parent group (already stored)
-START, END, MAX_CLOUD, SCALE = "2017-03-28", "2026-01-01", 40, 10
+START, END, MAX_CLOUD, SCALE = "2017-03-28", "2026-09-01", 40, 10
 
 # shapefile column -> plot table column
 COLS = {
