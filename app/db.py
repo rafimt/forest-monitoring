@@ -80,14 +80,35 @@ def list_aois():
         return conn.execute(text("SELECT id, name FROM aoi ORDER BY id DESC;")).all()
     
 def list_plots(aoi_name: str):
-    """List plots for an AOI (by AOI name) with range/beat, ordered by label."""
+    """List plots for an AOI (by AOI name) with range/beat + key attributes."""
     with engine.begin() as conn:
         return conn.execute(text("""
-            SELECT p.id, p.plot_name, p.range_name, p.beat_name
+            SELECT p.id, p.plot_name, p.range_name, p.beat_name,
+                   p.area_ha, p.plant_year, p.plant_type, p.village, p.division
             FROM plot p JOIN aoi a ON a.id = p.aoi_id
             WHERE a.name = :n
             ORDER BY p.range_name, p.beat_name, p.plot_name;
         """), {"n": aoi_name}).all()
+
+
+def load_beat_series(plot_ids):
+    """Average monthly series across a set of plots (e.g. all plots in a beat)."""
+    if not plot_ids:
+        return []
+    with engine.begin() as conn:
+        rows = conn.execute(text("""
+            SELECT image_date,
+                   AVG(median_ndvi) AS ndvi, AVG(evi) AS evi, AVG(savi) AS savi,
+                   AVG(ndre) AS ndre, AVG(gndvi) AS gndvi
+            FROM ndvi_series
+            WHERE plot_id = ANY(:ids)
+            GROUP BY image_date ORDER BY image_date;
+        """), {"ids": list(plot_ids)}).all()
+    return [
+        {"date": str(r.image_date), "ndvi": r.ndvi, "evi": r.evi, "savi": r.savi,
+         "ndre": r.ndre, "gndvi": r.gndvi, "n_images": None}
+        for r in rows
+    ]
 
 
 def load_plot_attrs(plot_id: int):
