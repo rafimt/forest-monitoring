@@ -80,13 +80,13 @@ def list_aois():
         return conn.execute(text("SELECT id, name FROM aoi ORDER BY id DESC;")).all()
     
 def list_plots(aoi_name: str):
-    """List plots for an AOI (by AOI name), ordered by label."""
+    """List plots for an AOI (by AOI name) with range/beat, ordered by label."""
     with engine.begin() as conn:
         return conn.execute(text("""
-            SELECT p.id, p.plot_name
+            SELECT p.id, p.plot_name, p.range_name, p.beat_name
             FROM plot p JOIN aoi a ON a.id = p.aoi_id
             WHERE a.name = :n
-            ORDER BY p.plot_name;
+            ORDER BY p.range_name, p.beat_name, p.plot_name;
         """), {"n": aoi_name}).all()
 
 
