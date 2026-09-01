@@ -13,7 +13,7 @@ from streamlit_folium import st_folium
 
 from app.db import (
     query, load_series, load_aoi_geojson,
-    list_plots, load_plot_series, load_plot_attrs, load_all_plots_geojson,
+    list_plots, load_beat_series, load_all_plots_geojson,
 )
 from app.mapping import make_map, BASEMAPS
 from app.charts import vi_line_chart, INDICES
@@ -37,9 +37,9 @@ def get_geojson(aoi_id):
 
 @st.cache_data(ttl=600, show_spinner=False)
 def get_plots(aoi_name):
-    # (id, plot_name, range_name, beat_name)
-    return [(r.id, r.plot_name, r.range_name, r.beat_name)
-            for r in list_plots(aoi_name)]
+    # rows: id, plot_name, range_name, beat_name, area_ha, plant_year,
+    #       plant_type, village, division
+    return [tuple(r) for r in list_plots(aoi_name)]
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -48,13 +48,8 @@ def get_plots_geojson(aoi_name):
 
 
 @st.cache_data(ttl=600, show_spinner=False)
-def get_plot_series(plot_id):
-    return load_plot_series(plot_id)
-
-
-@st.cache_data(ttl=600, show_spinner=False)
-def get_plot_attrs(plot_id):
-    return load_plot_attrs(plot_id)
+def get_beat_series(plot_ids):
+    return load_beat_series(plot_ids)
 
 st.set_page_config(page_title="Vegetation Index Viewer", page_icon="🌱", layout="wide")
 st.title("🌱 Vegetation Index Viewer")
@@ -83,51 +78,58 @@ st.session_state["aoi_id"] = aoi_id
 # ── Plot mode: if this AOI has individual plots, let the user pick one ──
 aoi_name = aois.set_index("id").loc[aoi_id, "name"]
 plots = get_plots(aoi_name)
-plot_id = None
+beat_ids = None
 plots_fc = None
+beat_plots = None
 if plots:
-    # Cascading filters: Range -> Beat -> Plot.
-    ranges = sorted({r for _, _, r, _ in plots if r})
-    r1, r2, r3 = st.columns(3)
+    # Cascading filters: Range -> Beat. A beat may contain several plots,
+    # which are aggregated together.
+    ranges = sorted({p[2] for p in plots if p[2]})
+    r1, r2 = st.columns(2)
     with r1:
         sel_range = st.selectbox("Range", ranges)
     in_range = [p for p in plots if p[2] == sel_range]
 
-    beats = sorted({b for _, _, _, b in in_range if b})
+    beats = sorted({p[3] for p in in_range if p[3]})
     with r2:
         sel_beat = st.selectbox("Beat", beats)
-    in_beat = [p for p in in_range if p[3] == sel_beat]
-
-    plot_labels = {name: pid for pid, name, _, _ in in_beat}
-    with r3:
-        plot_choice = st.selectbox(f"Plot ({len(in_beat)})", list(plot_labels.keys()))
-    plot_id = plot_labels[plot_choice]
+    beat_plots = [p for p in in_range if p[3] == sel_beat]
+    beat_ids = tuple(p[0] for p in beat_plots)
     plots_fc = get_plots_geojson(aoi_name)
 
-# ── Load data from PostGIS (plot series if a plot is selected) ──
-if plot_id:
+# ── Load data from PostGIS ───────────────────────────────────
+if beat_ids:
     geojson_str = None                       # map drawn from plots_fc below
-    series = get_plot_series(plot_id)
-    attrs = get_plot_attrs(plot_id)
+    series = get_beat_series(beat_ids)
+    # Aggregate attributes across the beat's plots.
+    areas = [p[4] for p in beat_plots if p[4] is not None]
+    attrs = {
+        "n_plots": len(beat_plots),
+        "area_ha": sum(areas) if areas else None,
+        "plant_year": ", ".join(sorted({p[5] for p in beat_plots if p[5]})) or "—",
+        "plant_type": next((p[6] for p in beat_plots if p[6]), "—"),
+        "village": ", ".join(sorted({p[7] for p in beat_plots if p[7]})) or "—",
+        "range_name": sel_range, "beat_name": sel_beat,
+        "division": next((p[8] for p in beat_plots if p[8]), "—"),
+    }
 else:
     geojson_str = get_geojson(aoi_id)
     series = get_series(aoi_id)
     attrs = None
 
-# ── Plot attributes (depends on plot, not index) ─────────────
+# ── Beat details (depends on beat, not index) ────────────────
 if attrs:
-    st.subheader("Plot details")
+    st.subheader("Beat details")
     area = f"{attrs.get('area_ha'):.2f}" if attrs.get("area_ha") else "—"
-    # Markdown (not st.metric) so long text like "Rajapalong Beat" wraps
-    # instead of being truncated with an ellipsis.
     a1, a2, a3, a4 = st.columns(4)
     a1.markdown(f"**Area (ha)**<br>{area}", unsafe_allow_html=True)
-    a2.markdown(f"**Plant year**<br>{attrs.get('plant_year') or '—'}", unsafe_allow_html=True)
-    a3.markdown(f"**Beat**<br>{attrs.get('beat_name') or '—'}", unsafe_allow_html=True)
-    a4.markdown(f"**Village**<br>{attrs.get('village') or '—'}", unsafe_allow_html=True)
-    st.caption(f"Type: {attrs.get('plant_type') or '—'}  ·  "
-               f"Range: {attrs.get('range_name') or '—'}  ·  "
-               f"Division: {attrs.get('division') or '—'}")
+    a2.markdown(f"**Plots**<br>{attrs.get('n_plots')}", unsafe_allow_html=True)
+    a3.markdown(f"**Plant year**<br>{attrs.get('plant_year')}", unsafe_allow_html=True)
+    a4.markdown(f"**Village**<br>{attrs.get('village')}", unsafe_allow_html=True)
+    st.caption(f"Type: {attrs.get('plant_type')}  ·  "
+               f"Range: {attrs.get('range_name')}  ·  "
+               f"Beat: {attrs.get('beat_name')}  ·  "
+               f"Division: {attrs.get('division')}")
 
 st.divider()
 
@@ -145,26 +147,28 @@ with left:
     m = make_map(basemap=basemap)
 
     if plots_fc:
-        # Draw all plots; highlight the selected one in red, others gray.
+        # Draw all plots; highlight the selected beat's plots in red, others gray.
         fc = plots_fc if isinstance(plots_fc, dict) else json.loads(plots_fc)
+        sel_ids = set(beat_ids or ())
 
         def _style(feat):
-            sel = feat["properties"]["id"] == plot_id
+            sel = feat["properties"]["id"] in sel_ids
             return {"color": "#c1272d" if sel else "#666",
                     "weight": 2 if sel else 1,
                     "fillColor": "#ff6b6b" if sel else "#999",
-                    "fillOpacity": 0.5 if sel else 0.15}
+                    "fillOpacity": 0.5 if sel else 0.12}
 
         folium.GeoJson(
             fc, name="Plots", style_function=_style,
             tooltip=folium.GeoJsonTooltip(fields=["name"], aliases=[""]),
         ).add_to(m)
-        # Fit to ALL plots (whole plantation), not the selected one, so the map
-        # stays framed and doesn't jump/zoom when you switch plots.
+        # Zoom to the selected beat's plots.
         from shapely.geometry import shape as _shape
         from shapely.ops import unary_union
-        allb = unary_union([_shape(f["geometry"]) for f in fc["features"]]).bounds
-        m.fit_bounds([[allb[1], allb[0]], [allb[3], allb[2]]])
+        selfeats = [f for f in fc["features"] if f["properties"]["id"] in sel_ids]
+        if selfeats:
+            b = unary_union([_shape(f["geometry"]) for f in selfeats]).bounds
+            m.fit_bounds([[b[1], b[0]], [b[3], b[2]]])
     else:
         geom = shape(json.loads(geojson_str))
         folium.GeoJson(
