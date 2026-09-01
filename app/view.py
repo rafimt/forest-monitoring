@@ -213,9 +213,10 @@ if series:
     tbl["date"] = pd.to_datetime(tbl["date"]).dt.strftime("%b %Y")
     for col in ["ndvi", "evi", "savi", "ndre", "gndvi"]:
         tbl[col] = tbl[col].round(3)
+    tbl = tbl.drop(columns=["n_images"], errors="ignore")
     tbl = tbl.rename(columns={
         "date": "Month", "ndvi": "NDVI", "evi": "EVI", "savi": "SAVI",
-        "ndre": "NDRE", "gndvi": "GNDVI", "n_images": "Images",
+        "ndre": "NDRE", "gndvi": "GNDVI",
     })
     st.divider()
     _, mid, _ = st.columns([1, 2, 1])
