@@ -37,7 +37,9 @@ def get_geojson(aoi_id):
 
 @st.cache_data(ttl=600, show_spinner=False)
 def get_plots(aoi_name):
-    return [(r.id, r.plot_name) for r in list_plots(aoi_name)]
+    # (id, plot_name, range_name, beat_name)
+    return [(r.id, r.plot_name, r.range_name, r.beat_name)
+            for r in list_plots(aoi_name)]
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -72,11 +74,9 @@ if aois.empty:
 
 idx_labels = {v[0]: k for k, v in INDICES.items()}   # "NDVI" -> "ndvi"
 
-c_aoi, c_plot = st.columns([2, 2])
-with c_aoi:
-    labels = {DISPLAY.get(r["name"], r["name"]): r.id for _, r in aois.iterrows()}
-    aoi_choice = st.selectbox("Area of interest", list(labels.keys()))
-    aoi_id = labels[aoi_choice]
+labels = {DISPLAY.get(r["name"], r["name"]): r.id for _, r in aois.iterrows()}
+aoi_choice = st.selectbox("Area of interest", list(labels.keys()))
+aoi_id = labels[aoi_choice]
 
 st.session_state["aoi_id"] = aoi_id
 
@@ -86,9 +86,21 @@ plots = get_plots(aoi_name)
 plot_id = None
 plots_fc = None
 if plots:
-    plot_labels = {name: pid for pid, name in plots}
-    with c_plot:
-        plot_choice = st.selectbox(f"Plot ({len(plots)} total)", list(plot_labels.keys()))
+    # Cascading filters: Range -> Beat -> Plot.
+    ranges = sorted({r for _, _, r, _ in plots if r})
+    r1, r2, r3 = st.columns(3)
+    with r1:
+        sel_range = st.selectbox("Range", ranges)
+    in_range = [p for p in plots if p[2] == sel_range]
+
+    beats = sorted({b for _, _, _, b in in_range if b})
+    with r2:
+        sel_beat = st.selectbox("Beat", beats)
+    in_beat = [p for p in in_range if p[3] == sel_beat]
+
+    plot_labels = {name: pid for pid, name, _, _ in in_beat}
+    with r3:
+        plot_choice = st.selectbox(f"Plot ({len(in_beat)})", list(plot_labels.keys()))
     plot_id = plot_labels[plot_choice]
     plots_fc = get_plots_geojson(aoi_name)
 
@@ -147,14 +159,18 @@ with left:
             fc, name="Plots", style_function=_style,
             tooltip=folium.GeoJsonTooltip(fields=["name"], aliases=[""]),
         ).add_to(m)
-        sel = [f for f in fc["features"] if f["properties"]["id"] == plot_id][0]
-        b = shape(sel["geometry"]).bounds
-        m.fit_bounds([[b[1], b[0]], [b[3], b[2]]])
+        # Fit to ALL plots (whole plantation), not the selected one, so the map
+        # stays framed and doesn't jump/zoom when you switch plots.
+        from shapely.geometry import shape as _shape
+        from shapely.ops import unary_union
+        allb = unary_union([_shape(f["geometry"]) for f in fc["features"]]).bounds
+        m.fit_bounds([[allb[1], allb[0]], [allb[3], allb[2]]])
     else:
         geom = shape(json.loads(geojson_str))
         folium.GeoJson(
             geojson_str, name="AOI",
-            style_function=lambda _: {"color": "#c1272d", "weight": 2, "fillOpacity": 0.1},
+            style_function=lambda _: {"color": "#c1272d", "weight": 4,
+                                      "fill": False, "fillOpacity": 0},
         ).add_to(m)
         minx, miny, maxx, maxy = geom.bounds
         m.fit_bounds([[miny, minx], [maxy, maxx]])
