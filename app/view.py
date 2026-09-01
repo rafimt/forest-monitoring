@@ -13,7 +13,7 @@ from streamlit_folium import st_folium
 
 from app.db import (
     query, load_series, load_aoi_geojson,
-    list_plots, load_beat_series, load_all_plots_geojson,
+    list_plots, load_plot_series, load_all_plots_geojson,
 )
 from app.mapping import make_map, BASEMAPS
 from app.charts import vi_line_chart, INDICES
@@ -48,8 +48,8 @@ def get_plots_geojson(aoi_name):
 
 
 @st.cache_data(ttl=600, show_spinner=False)
-def get_beat_series(plot_ids):
-    return load_beat_series(plot_ids)
+def get_plot_series(plot_id):
+    return load_plot_series(plot_id)
 
 st.set_page_config(page_title="Vegetation Index Viewer", page_icon="🌱", layout="wide")
 st.title("🌱 Vegetation Index Viewer")
@@ -78,14 +78,12 @@ st.session_state["aoi_id"] = aoi_id
 # ── Plot mode: if this AOI has individual plots, let the user pick one ──
 aoi_name = aois.set_index("id").loc[aoi_id, "name"]
 plots = get_plots(aoi_name)
-beat_ids = None
+plot_id = None
 plots_fc = None
-beat_plots = None
 if plots:
-    # Cascading filters: Range -> Beat. A beat may contain several plots,
-    # which are aggregated together.
+    # Cascading filters: Range -> Beat -> Plot (Plot only if the beat has >1).
     ranges = sorted({p[2] for p in plots if p[2]})
-    r1, r2 = st.columns(2)
+    r1, r2, r3 = st.columns(3)
     with r1:
         sel_range = st.selectbox("Range", ranges)
     in_range = [p for p in plots if p[2] == sel_range]
@@ -93,43 +91,42 @@ if plots:
     beats = sorted({p[3] for p in in_range if p[3]})
     with r2:
         sel_beat = st.selectbox("Beat", beats)
-    beat_plots = [p for p in in_range if p[3] == sel_beat]
-    beat_ids = tuple(p[0] for p in beat_plots)
+    beat_plots = sorted([p for p in in_range if p[3] == sel_beat], key=lambda p: p[1])
+
+    if len(beat_plots) > 1:
+        plabels = {f"Plot {i + 1}": p for i, p in enumerate(beat_plots)}
+        with r3:
+            plot_choice = st.selectbox(f"Plot ({len(beat_plots)})", list(plabels.keys()))
+        sel_row = plabels[plot_choice]
+    else:
+        sel_row = beat_plots[0]
+
+    plot_id = sel_row[0]
     plots_fc = get_plots_geojson(aoi_name)
 
 # ── Load data from PostGIS ───────────────────────────────────
-if beat_ids:
+if plot_id:
     geojson_str = None                       # map drawn from plots_fc below
-    series = get_beat_series(beat_ids)
-    # Aggregate attributes across the beat's plots.
-    areas = [p[4] for p in beat_plots if p[4] is not None]
+    series = get_plot_series(plot_id)
     attrs = {
-        "n_plots": len(beat_plots),
-        "area_ha": sum(areas) if areas else None,
-        "plant_year": ", ".join(sorted({p[5] for p in beat_plots if p[5]})) or "—",
-        "plant_type": next((p[6] for p in beat_plots if p[6]), "—"),
-        "village": ", ".join(sorted({p[7] for p in beat_plots if p[7]})) or "—",
-        "range_name": sel_range, "beat_name": sel_beat,
-        "division": next((p[8] for p in beat_plots if p[8]), "—"),
+        "area_ha": sel_row[4], "plant_year": sel_row[5],
+        "plant_type": sel_row[6], "village": sel_row[7],
+        "range_name": sel_row[2], "beat_name": sel_row[3], "division": sel_row[8],
     }
 else:
     geojson_str = get_geojson(aoi_id)
     series = get_series(aoi_id)
     attrs = None
 
-# ── Beat details (depends on beat, not index) ────────────────
+# ── Plot details (depends on plot, not index) ────────────────
 if attrs:
-    st.subheader("Beat details")
+    st.subheader("Plot details")
     area = f"{attrs.get('area_ha'):.2f}" if attrs.get("area_ha") else "—"
     a1, a2, a3, a4 = st.columns(4)
     a1.markdown(f"**Area (ha)**<br>{area}", unsafe_allow_html=True)
-    a2.markdown(f"**Plots**<br>{attrs.get('n_plots')}", unsafe_allow_html=True)
-    a3.markdown(f"**Plant year**<br>{attrs.get('plant_year')}", unsafe_allow_html=True)
-    a4.markdown(f"**Village**<br>{attrs.get('village')}", unsafe_allow_html=True)
-    st.caption(f"Type: {attrs.get('plant_type')}  ·  "
-               f"Range: {attrs.get('range_name')}  ·  "
-               f"Beat: {attrs.get('beat_name')}  ·  "
-               f"Division: {attrs.get('division')}")
+    a2.markdown(f"**Plant year**<br>{attrs.get('plant_year') or '—'}", unsafe_allow_html=True)
+    a3.markdown(f"**Village**<br>{attrs.get('village') or '—'}", unsafe_allow_html=True)
+    a4.markdown(f"**Division**<br>{attrs.get('division') or '—'}", unsafe_allow_html=True)
 
 st.divider()
 
@@ -149,7 +146,7 @@ with left:
     if plots_fc:
         # Draw all plots; highlight the selected beat's plots in red, others gray.
         fc = plots_fc if isinstance(plots_fc, dict) else json.loads(plots_fc)
-        sel_ids = set(beat_ids or ())
+        sel_ids = {plot_id}
 
         def _style(feat):
             sel = feat["properties"]["id"] in sel_ids
