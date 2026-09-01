@@ -35,9 +35,9 @@ def clean_text(s):
     if s is None:
         return None
     s = str(s)
-    if "Ã" in s or "â€" in s:              # looks double-encoded
+    if "Ã" in s or "â€" in s:              # looks double-encoded (UTF-8 read as CP1252)
         try:
-            s = s.encode("latin-1").decode("utf-8")
+            s = s.encode("cp1252").decode("utf-8")
         except Exception:
             pass
     return (s.replace("’", "'").replace("‘", "'")
