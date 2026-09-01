@@ -29,11 +29,27 @@ COLS = {
 }
 
 
+def clean_text(s):
+    """Repair UTF-8-read-as-Latin-1 mojibake (e.g. 'â€™' -> ') and normalize
+    curly quotes to straight ASCII."""
+    if s is None:
+        return None
+    s = str(s)
+    if "Ã" in s or "â€" in s:              # looks double-encoded
+        try:
+            s = s.encode("latin-1").decode("utf-8")
+        except Exception:
+            pass
+    return (s.replace("’", "'").replace("‘", "'")
+             .replace("“", '"').replace("”", '"'))
+
+
 def labels_from_range(gdf):
     """Label each plot by range_name with a running number for duplicates:
     'Whykong Range 1', 'Whykong Range 2', ..."""
     counts, out = {}, []
     for rn in gdf["range_name"].fillna("Unknown"):
+        rn = clean_text(rn)
         counts[rn] = counts.get(rn, 0) + 1
         out.append(f"{rn} {counts[rn]}")
     return out
@@ -67,8 +83,7 @@ def main():
             if geom.geom_type == "Polygon":
                 from shapely.geometry import MultiPolygon
                 geom = MultiPolygon([geom])
-            vals = {dst: (None if row.get(src) is None else str(row.get(src)))
-                    for src, dst in COLS.items()}
+            vals = {dst: clean_text(row.get(src)) for src, dst in COLS.items()}
             vals["area_ha"] = float(row.get("Area_Ha")) if row.get("Area_Ha") is not None else None
             res = conn.execute(text(f"""
                 INSERT INTO plot (aoi_id, plot_name, geom, {", ".join(COLS.values())})
