@@ -52,7 +52,7 @@ def vi_line_chart(series, index="ndvi"):
         hi = max(hi, d[index].max())
         fig.add_trace(go.Scatter(
             x=d["year"], y=d[index], name=season, mode="lines+markers",
-            line=dict(color=color, width=2.5), marker=dict(size=5),
+            line=dict(color=color, width=2.5), marker=dict(size=6),
             legendgroup=season,
         ))
 
@@ -63,13 +63,11 @@ def vi_line_chart(series, index="ndvi"):
         yaxis_range=[lo - pad, hi + pad],
         hovermode="x unified",
         height=430,                    # match the map height
-        # Top-anchored at 0.20 -> the legend hangs down from the 0.2 line into
-        # the empty lower-right band. Needs theme=None on st.plotly_chart so
-        # this small font isn't overridden by Streamlit's Plotly theme.
-        legend=dict(orientation="v", yanchor="top", y=0.20,
+        legend=dict(orientation="v", yanchor="middle", y=0.10,
                     xanchor="right", x=0.99,
                     bgcolor="rgba(0,0,0,0)", borderwidth=0,
-                    font=dict(size=9), itemsizing="constant", tracegroupgap=1),
+                    font=dict(size=9),       # small so all 3 fit in the 0–0.2 band
+                    itemsizing="constant", tracegroupgap=2),
         margin=dict(t=50, r=20, b=40, l=50),
     )
     fig.update_xaxes(dtick=1)   # one tick per year
