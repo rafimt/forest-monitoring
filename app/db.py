@@ -155,7 +155,11 @@ def load_all_plots_geojson(aoi_name: str):
                 'features', COALESCE(json_agg(json_build_object(
                     'type','Feature',
                     'geometry', ST_AsGeoJSON(p.geom)::json,
-                    'properties', json_build_object('id', p.id, 'name', p.plot_name)
+                    'properties', json_build_object(
+                        'id', p.id, 'name', p.plot_name,
+                        'area_ha', ROUND(p.area_ha::numeric, 2),
+                        'plant_year', p.plant_year, 'plant_type', p.plant_type,
+                        'beat_name', p.beat_name, 'village', p.village)
                 )), '[]'::json)
             )::text
             FROM plot p JOIN aoi a ON a.id = p.aoi_id
