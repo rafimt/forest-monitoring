@@ -159,7 +159,8 @@ def load_all_plots_geojson(aoi_name: str):
                         'id', p.id, 'name', p.plot_name,
                         'area_ha', ROUND(p.area_ha::numeric, 2),
                         'plant_year', p.plant_year, 'plant_type', p.plant_type,
-                        'beat_name', p.beat_name, 'village', p.village)
+                        'range_name', p.range_name, 'beat_name', p.beat_name,
+                        'village', p.village, 'division', p.division)
                 )), '[]'::json)
             )::text
             FROM plot p JOIN aoi a ON a.id = p.aoi_id

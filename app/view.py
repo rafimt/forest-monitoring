@@ -93,7 +93,11 @@ with st.sidebar:
         sel_beat = st.selectbox("Beat", beats)
         beat_plots = sorted([p for p in in_range if p[3] == sel_beat], key=lambda p: p[1])
         if len(beat_plots) > 1:
-            plabels = {f"Plot {i + 1}": p for i, p in enumerate(beat_plots)}
+            # Label: "Plot_1 · 12.45 ha"
+            plabels = {
+                f"Plot_{i + 1} · {p[4]:.2f} ha" if p[4] else f"Plot_{i + 1}": p
+                for i, p in enumerate(beat_plots)
+            }
             sel_row = plabels[st.selectbox(f"Plot ({len(beat_plots)})", list(plabels.keys()))]
         else:
             sel_row = beat_plots[0]
@@ -149,8 +153,9 @@ with left:
             # Click a polygon -> popup with key info.
             popup=folium.GeoJsonPopup(
                 fields=["name", "area_ha", "plant_year", "plant_type",
-                        "beat_name", "village"],
-                aliases=["Plot", "Area (ha)", "Year", "Type", "Beat", "Village"],
+                        "range_name", "beat_name", "village", "division"],
+                aliases=["Plot", "Area (ha)", "Year", "Type",
+                         "Range", "Beat", "Village", "Division"],
             ),
         ).add_to(m)
         from shapely.geometry import shape as _shape
