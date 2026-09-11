@@ -32,7 +32,8 @@ def vi_line_chart(series, index="ndvi", seasons=None):
     Cool-dry), each point = median of that season's months in that year.
     `seasons` (list) limits which lines are drawn; None = all."""
     label = INDICES[index][0]
-    show = set(seasons) if seasons else set(SEASON_COLORS)
+    # None -> all seasons; an (even empty) list -> exactly those seasons.
+    show = set(SEASON_COLORS) if seasons is None else set(seasons)
     df = pd.DataFrame(series)
     if df.empty or "date" not in df:
         return go.Figure().update_layout(title=f"{label} — no data")
