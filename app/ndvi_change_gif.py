@@ -23,7 +23,7 @@ from app.db import engine
 BEAT = "Link Road Beat cum Check Station"
 PLOT_INDEX = 2               # "Plot_2" within the beat (1-based, by plot_name)
 START, END = 2017, 2026      # inclusive years
-MODE = "baseline"            # "baseline" (vs first year) or "consecutive"
+MODE = "consecutive"         # "consecutive" (year vs prior) or "baseline" (vs first year)
 MAX_CLOUD = 40
 DIM = 420                    # output frame size (px)
 OUT = "data/gifs/plot_change.gif"
@@ -94,7 +94,6 @@ def main():
         for prev, y in zip(have, have[1:]):
             diff = ndvi[y].subtract(ndvi[prev])
             frames.append(frame_png(diff, aoi, f"NDVI change {prev} -> {y}"))
-        print(f"  {y}")
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     imageio.mimsave(OUT, frames, duration=1.0, loop=0)
