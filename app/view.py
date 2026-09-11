@@ -132,6 +132,21 @@ if attrs:
         f"**Village** {attrs.get('village') or '—'}  ·  "
         f"**Division** {attrs.get('division') or '—'}"
     )
+    # Same info as a table (also available by clicking the polygon on the map).
+    with st.expander("Plot info (table)"):
+        info = pd.DataFrame(
+            [
+                ("Area (ha)", area),
+                ("Plant year", attrs.get("plant_year") or "—"),
+                ("Plant type", attrs.get("plant_type") or "—"),
+                ("Range", attrs.get("range_name") or "—"),
+                ("Beat", attrs.get("beat_name") or "—"),
+                ("Village", attrs.get("village") or "—"),
+                ("Division", attrs.get("division") or "—"),
+            ],
+            columns=["Attribute", "Value"],
+        )
+        st.dataframe(info, use_container_width=True, hide_index=True)
 
 # ── Map + index panel side by side ───────────────────────────
 left, right = st.columns([1, 1])
