@@ -56,7 +56,8 @@ st.set_page_config(page_title="Vegetation Index Viewer", page_icon="🌱", layou
 # Trim Streamlit's large default top padding so the header sits near the top
 # (but leave room so it isn't clipped by the top toolbar).
 st.markdown(
-    "<style>.block-container{padding-top:2.5rem;}</style>",
+    "<style>.block-container{padding-top:2.5rem;padding-left:1.5rem;"
+    "padding-right:1.5rem;}</style>",
     unsafe_allow_html=True,
 )
 
