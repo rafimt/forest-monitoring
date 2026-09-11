@@ -199,10 +199,8 @@ with right:
             f"<span style='color:#8a8a8a'>▼ {_month(min_date)}</span></div>",
             unsafe_allow_html=True,
         )
-        # theme=None -> use the figure's own styling (Streamlit's Plotly theme
-        # otherwise overrides the small legend font).
         st.plotly_chart(vi_line_chart(series, index=index),
-                        use_container_width=True, theme=None)
+                        use_container_width=True)
 
 # ── Data table (full width, centered) ────────────────────────
 if series:
