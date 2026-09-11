@@ -53,6 +53,7 @@ def vi_line_chart(series, index="ndvi"):
         fig.add_trace(go.Scatter(
             x=d["year"], y=d[index], name=season, mode="lines+markers",
             line=dict(color=color, width=2.5), marker=dict(size=6),
+            legendgroup=season,
         ))
 
     pad = max((hi - lo) * 0.08, 0.05)
@@ -65,8 +66,8 @@ def vi_line_chart(series, index="ndvi"):
         legend=dict(orientation="v", yanchor="middle", y=0.10,
                     xanchor="right", x=0.99,
                     bgcolor="rgba(0,0,0,0)", borderwidth=0,
-                    font=dict(size=10),      # small so all 3 fit in the 0–0.2 band
-                    itemsizing="constant"),
+                    font=dict(size=9),       # small so all 3 fit in the 0–0.2 band
+                    itemsizing="constant", tracegroupgap=2),
         margin=dict(t=50, r=20, b=40, l=50),
     )
     fig.update_xaxes(dtick=1)   # one tick per year
