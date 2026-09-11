@@ -52,7 +52,6 @@ def get_plot_series(plot_id):
     return load_plot_series(plot_id)
 
 st.set_page_config(page_title="Vegetation Index Viewer", page_icon="🌱", layout="wide")
-st.title("🌱 Vegetation Index Viewer")
 
 # Friendly display names for stored AOIs.
 DISPLAY = {
@@ -61,7 +60,6 @@ DISPLAY = {
     "coxbazar_south_plantation": "Cox's Bazar South Plantation",
 }
 
-# ── Controls ─────────────────────────────────────────────────
 aois = get_aois()
 if aois.empty:
     st.warning("No AOIs stored yet. Run the ingest script first.")
@@ -69,40 +67,40 @@ if aois.empty:
 
 idx_labels = {v[0]: k for k, v in INDICES.items()}   # "NDVI" -> "ndvi"
 
-labels = {DISPLAY.get(r["name"], r["name"]): r.id for _, r in aois.iterrows()}
-aoi_choice = st.selectbox("Area of interest", list(labels.keys()))
-aoi_id = labels[aoi_choice]
 
-st.session_state["aoi_id"] = aoi_id
+def _month(d):  # "2023-09" or "2023-09-01" -> "Sep 2023"
+    return pd.to_datetime(d).strftime("%b %Y")
 
-# ── Plot mode: if this AOI has individual plots, let the user pick one ──
-aoi_name = aois.set_index("id").loc[aoi_id, "name"]
-plots = get_plots(aoi_name)
-plot_id = None
-plots_fc = None
-if plots:
-    # Cascading filters: Range -> Beat -> Plot (Plot only if the beat has >1).
-    ranges = sorted({p[2] for p in plots if p[2]})
-    r1, r2, r3 = st.columns(3)
-    with r1:
+
+# ── All selectors in the sidebar -> compact main area (no scroll to map) ──
+with st.sidebar:
+    st.header("🌱 Controls")
+    labels = {DISPLAY.get(r["name"], r["name"]): r.id for _, r in aois.iterrows()}
+    aoi_choice = st.selectbox("Area of interest", list(labels.keys()))
+    aoi_id = labels[aoi_choice]
+    st.session_state["aoi_id"] = aoi_id
+
+    aoi_name = aois.set_index("id").loc[aoi_id, "name"]
+    plots = get_plots(aoi_name)
+    plot_id = None
+    plots_fc = None
+    sel_row = None
+    if plots:
+        ranges = sorted({p[2] for p in plots if p[2]})
         sel_range = st.selectbox("Range", ranges)
-    in_range = [p for p in plots if p[2] == sel_range]
-
-    beats = sorted({p[3] for p in in_range if p[3]})
-    with r2:
+        in_range = [p for p in plots if p[2] == sel_range]
+        beats = sorted({p[3] for p in in_range if p[3]})
         sel_beat = st.selectbox("Beat", beats)
-    beat_plots = sorted([p for p in in_range if p[3] == sel_beat], key=lambda p: p[1])
+        beat_plots = sorted([p for p in in_range if p[3] == sel_beat], key=lambda p: p[1])
+        if len(beat_plots) > 1:
+            plabels = {f"Plot {i + 1}": p for i, p in enumerate(beat_plots)}
+            sel_row = plabels[st.selectbox(f"Plot ({len(beat_plots)})", list(plabels.keys()))]
+        else:
+            sel_row = beat_plots[0]
+        plot_id = sel_row[0]
+        plots_fc = get_plots_geojson(aoi_name)
 
-    if len(beat_plots) > 1:
-        plabels = {f"Plot {i + 1}": p for i, p in enumerate(beat_plots)}
-        with r3:
-            plot_choice = st.selectbox(f"Plot ({len(beat_plots)})", list(plabels.keys()))
-        sel_row = plabels[plot_choice]
-    else:
-        sel_row = beat_plots[0]
-
-    plot_id = sel_row[0]
-    plots_fc = get_plots_geojson(aoi_name)
+    basemap = st.selectbox("Basemap", list(BASEMAPS.keys()))
 
 # ── Load data from PostGIS ───────────────────────────────────
 if plot_id:
@@ -118,33 +116,24 @@ else:
     series = get_series(aoi_id)
     attrs = None
 
-# ── Plot details (depends on plot, not index) ────────────────
+# ── Compact header: AOI name + one-line plot details ─────────
+st.subheader(f"🌱 {aoi_choice}")
 if attrs:
-    st.subheader("Plot details")
-    area = f"{attrs.get('area_ha'):.2f}" if attrs.get("area_ha") else "—"
-    a1, a2, a3, a4 = st.columns(4)
-    a1.markdown(f"**Area (ha)**<br>{area}", unsafe_allow_html=True)
-    a2.markdown(f"**Plant year**<br>{attrs.get('plant_year') or '—'}", unsafe_allow_html=True)
-    a3.markdown(f"**Village**<br>{attrs.get('village') or '—'}", unsafe_allow_html=True)
-    a4.markdown(f"**Division**<br>{attrs.get('division') or '—'}", unsafe_allow_html=True)
-
-st.divider()
-
-
-def _month(d):  # "2023-09" or "2023-09-01" -> "Sep 2023"
-    return pd.to_datetime(d).strftime("%b %Y")
-
+    area = f"{attrs.get('area_ha'):.2f} ha" if attrs.get("area_ha") else "—"
+    st.caption(
+        f"**Area** {area}  ·  **Year** {attrs.get('plant_year') or '—'}  ·  "
+        f"**Beat** {attrs.get('beat_name') or '—'}  ·  "
+        f"**Village** {attrs.get('village') or '—'}  ·  "
+        f"**Division** {attrs.get('division') or '—'}"
+    )
 
 # ── Map + index panel side by side ───────────────────────────
-left, right = st.columns(2)
+left, right = st.columns([1, 1])
 
 with left:
-    st.subheader("Area")
-    basemap = st.selectbox("Basemap", list(BASEMAPS.keys()))
     m = make_map(basemap=basemap)
 
     if plots_fc:
-        # Draw all plots; highlight the selected beat's plots in red, others gray.
         fc = plots_fc if isinstance(plots_fc, dict) else json.loads(plots_fc)
         sel_ids = {plot_id}
 
@@ -157,8 +146,13 @@ with left:
         folium.GeoJson(
             fc, name="Plots", style_function=_style,
             tooltip=folium.GeoJsonTooltip(fields=["name"], aliases=[""]),
+            # Click a polygon -> popup with key info.
+            popup=folium.GeoJsonPopup(
+                fields=["name", "area_ha", "plant_year", "plant_type",
+                        "beat_name", "village"],
+                aliases=["Plot", "Area (ha)", "Year", "Type", "Beat", "Village"],
+            ),
         ).add_to(m)
-        # Zoom to the selected beat's plots.
         from shapely.geometry import shape as _shape
         from shapely.ops import unary_union
         selfeats = [f for f in fc["features"] if f["properties"]["id"] in sel_ids]
@@ -176,7 +170,7 @@ with left:
         m.fit_bounds([[miny, minx], [maxy, maxx]])
 
     # Stable key -> the map updates in place instead of remounting (no blink).
-    st_folium(m, use_container_width=True, height=520,
+    st_folium(m, use_container_width=True, height=430,
               returned_objects=[], key="aoimap")
 
 with right:
@@ -185,7 +179,6 @@ with right:
     def index_panel():
         idx_choice = st.selectbox("Vegetation index", list(idx_labels.keys()))
         index = idx_labels[idx_choice]
-        st.caption(INDICES[index][1])
 
         if not series:
             st.info("No series stored for this selection.")

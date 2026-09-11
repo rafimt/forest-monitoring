@@ -10,47 +10,61 @@ INDICES = {
     "gndvi": ("GNDVI", "Green NDVI (chlorophyll, water/fertilizer stress)"),
 }
 
+# Bangladesh seasons (by month) — a per-season yearly median is far easier to
+# read than a noisy all-year line.
+#   Monsoon (Jun–Oct)  : wet, vegetation peak
+#   Dry-summer (Mar–May): hot pre-monsoon
+#   Cool-dry (Nov–Feb) : winter / autumn dry
+SEASON_OF_MONTH = {
+    1: "Cool-dry", 2: "Cool-dry", 3: "Dry-summer", 4: "Dry-summer",
+    5: "Dry-summer", 6: "Monsoon", 7: "Monsoon", 8: "Monsoon",
+    9: "Monsoon", 10: "Monsoon", 11: "Cool-dry", 12: "Cool-dry",
+}
+SEASON_COLORS = {
+    "Monsoon": "#1a9850",     # green — peak
+    "Dry-summer": "#e08214",  # orange — hot dry
+    "Cool-dry": "#4575b4",    # blue — cool dry
+}
 
-def vi_line_chart(series, index="ndvi", roll=3):
-    """Line chart of one vegetation index over time: raw monthly (faint) +
-    a bold rolling-mean trend. `index` is one of INDICES keys."""
+
+def vi_line_chart(series, index="ndvi"):
+    """Seasonal yearly-median chart: one line per season (Monsoon, Dry-summer,
+    Cool-dry), each point = median of that season's months in that year."""
     label = INDICES[index][0]
     df = pd.DataFrame(series)
+    if df.empty or "date" not in df:
+        return go.Figure().update_layout(title=f"{label} — no data")
     df["date"] = pd.to_datetime(df["date"])
-    df = df.sort_values("date")
-    df["trend"] = df[index].rolling(roll, min_periods=1, center=True).mean()
+    df["year"] = df["date"].dt.year
+    df["season"] = df["date"].dt.month.map(SEASON_OF_MONTH)
+    df = df.dropna(subset=[index])
 
-    # Auto y-range with padding, so negative values (water / bare soil) show.
-    lo = min(df[index].min(), 0.0)
-    hi = max(df[index].max(), 0.0)
-    pad = max((hi - lo) * 0.08, 0.05)
-    y_range = [lo - pad, hi + pad]
+    # Median of the index per (year, season).
+    grp = df.groupby(["year", "season"])[index].median().reset_index()
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=df["date"], y=df[index],
-        name=f"Monthly {label}",
-        mode="lines+markers",
-        line=dict(color="#8fd19e", width=1),
-        marker=dict(size=5),
-        opacity=0.6,
-    ))
-    fig.add_trace(go.Scatter(
-        x=df["date"], y=df["trend"],
-        name=f"{roll}-mo trend",
-        line=dict(color="#1a9850", width=3),
-    ))
+    lo, hi = 0.0, 0.0
+    for season, color in SEASON_COLORS.items():
+        d = grp[grp["season"] == season].sort_values("year")
+        if d.empty:
+            continue
+        lo = min(lo, d[index].min())
+        hi = max(hi, d[index].max())
+        fig.add_trace(go.Scatter(
+            x=d["year"], y=d[index], name=season, mode="lines+markers",
+            line=dict(color=color, width=2.5), marker=dict(size=6),
+        ))
+
+    pad = max((hi - lo) * 0.08, 0.05)
     fig.update_layout(
-        title=f"{label} over time",
-        xaxis_title="Month",
-        yaxis_title=label,
-        yaxis_range=y_range,
+        title=f"{label} — seasonal median by year",
+        xaxis_title="Year", yaxis_title=label,
+        yaxis_range=[lo - pad, hi + pad],
         hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
         margin=dict(t=60, r=20, b=40, l=50),
     )
-    fig.update_xaxes(tickformat="%b %Y")
-    # Zero line (only visible when the data actually dips below 0).
-    if y_range[0] < 0:
-        fig.add_hline(y=0, line_dash="dot", line_color="#999", opacity=0.7)
+    fig.update_xaxes(dtick=1)   # one tick per year
+    if lo - pad < 0:
+        fig.add_hline(y=0, line_dash="dot", line_color="#999", opacity=0.6)
     return fig
