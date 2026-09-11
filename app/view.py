@@ -137,16 +137,8 @@ else:
     series = get_series(aoi_id)
     attrs = None
 
-# ── Compact header: AOI name + one-line plot details ─────────
+# ── Compact header: AOI name (details are in the Plot info table + popup) ──
 st.subheader(f"🌱 {aoi_choice}")
-if attrs:
-    area = f"{attrs.get('area_ha'):.2f} ha" if attrs.get("area_ha") else "—"
-    st.caption(
-        f"**Area** {area}  ·  **Year** {dash(attrs.get('plant_year'))}  ·  "
-        f"**Beat** {dash(attrs.get('beat_name'))}  ·  "
-        f"**Village** {dash(attrs.get('village'))}  ·  "
-        f"**Division** {dash(attrs.get('division'))}"
-    )
 
 # ── Map + index panel side by side ───────────────────────────
 left, right = st.columns([1, 1])
