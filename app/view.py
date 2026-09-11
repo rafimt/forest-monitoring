@@ -53,6 +53,20 @@ def get_plot_series(plot_id):
 
 st.set_page_config(page_title="Vegetation Index Viewer", page_icon="🌱", layout="wide")
 
+# Trim Streamlit's large default top padding so the header sits near the top.
+st.markdown(
+    "<style>.block-container{padding-top:1.2rem;}</style>",
+    unsafe_allow_html=True,
+)
+
+
+def dash(v):
+    """Show an em dash for missing/NULL values."""
+    if v is None or str(v).strip() in ("", "NULL", "None", "nan"):
+        return "—"
+    return v
+
+
 # Friendly display names for stored AOIs.
 DISPLAY = {
     "dipto_cashew": "Cashew field",
@@ -127,10 +141,10 @@ st.subheader(f"🌱 {aoi_choice}")
 if attrs:
     area = f"{attrs.get('area_ha'):.2f} ha" if attrs.get("area_ha") else "—"
     st.caption(
-        f"**Area** {area}  ·  **Year** {attrs.get('plant_year') or '—'}  ·  "
-        f"**Beat** {attrs.get('beat_name') or '—'}  ·  "
-        f"**Village** {attrs.get('village') or '—'}  ·  "
-        f"**Division** {attrs.get('division') or '—'}"
+        f"**Area** {area}  ·  **Year** {dash(attrs.get('plant_year'))}  ·  "
+        f"**Beat** {dash(attrs.get('beat_name'))}  ·  "
+        f"**Village** {dash(attrs.get('village'))}  ·  "
+        f"**Division** {dash(attrs.get('division'))}"
     )
 
 # ── Map + index panel side by side ───────────────────────────
@@ -209,12 +223,12 @@ with left:
         info = pd.DataFrame(
             [
                 ("Area (ha)", f"{attrs.get('area_ha'):.2f}" if attrs.get("area_ha") else "—"),
-                ("Plant year", attrs.get("plant_year") or "—"),
-                ("Plant type", attrs.get("plant_type") or "—"),
-                ("Range", attrs.get("range_name") or "—"),
-                ("Beat", attrs.get("beat_name") or "—"),
-                ("Village", attrs.get("village") or "—"),
-                ("Division", attrs.get("division") or "—"),
+                ("Plant year", dash(attrs.get("plant_year"))),
+                ("Plant type", dash(attrs.get("plant_type"))),
+                ("Range", dash(attrs.get("range_name"))),
+                ("Beat", dash(attrs.get("beat_name"))),
+                ("Village", dash(attrs.get("village"))),
+                ("Division", dash(attrs.get("division"))),
             ],
             columns=["Attribute", "Value"],
         )
