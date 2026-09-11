@@ -96,7 +96,8 @@ def main():
             frames.append(frame_png(diff, aoi, f"NDVI change {prev} -> {y}"))
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    imageio.mimsave(OUT, frames, duration=1.0, loop=0)
+    # duration is in MILLISECONDS per frame in imageio v2.x.
+    imageio.mimsave(OUT, frames, duration=1200, loop=0)
     print(f"Saved {len(frames)} frames -> {OUT}")
 
 
