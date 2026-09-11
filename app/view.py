@@ -121,7 +121,9 @@ with st.sidebar:
 
     idx_choice = st.selectbox("Vegetation index", list(idx_labels.keys()))
     index = idx_labels[idx_choice]
-    basemap = st.selectbox("Basemap", list(BASEMAPS.keys()))
+    _bm = list(BASEMAPS.keys())
+    _default_bm = _bm.index("Esri Satellite") if "Esri Satellite" in _bm else 0
+    basemap = st.selectbox("Basemap", _bm, index=_default_bm)
 
 # ── Load data from PostGIS ───────────────────────────────────
 if plot_id:
