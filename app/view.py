@@ -218,7 +218,8 @@ with left:
             ],
             columns=["Attribute", "Value"],
         )
-        st.dataframe(info, use_container_width=True, hide_index=True)
+        with st.expander("Plot info", expanded=False):
+            st.dataframe(info, use_container_width=True, hide_index=True)
 
 with right:
     if not series:
@@ -252,4 +253,5 @@ with right:
             "date": "Month", "ndvi": "NDVI", "evi": "EVI", "savi": "SAVI",
             "ndre": "NDRE", "gndvi": "GNDVI",
         })
-        st.dataframe(tbl, use_container_width=True, hide_index=True)
+        with st.expander("Indices table", expanded=False):
+            st.dataframe(tbl, use_container_width=True, hide_index=True)
