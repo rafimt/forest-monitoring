@@ -62,7 +62,7 @@ def vi_line_chart(series, index="ndvi"):
         yaxis_range=[lo - pad, hi + pad],
         hovermode="x unified",
         height=430,                    # match the map height
-        legend=dict(orientation="v", yanchor="bottom", y=0.02,
+        legend=dict(orientation="v", yanchor="bottom", y=0.12,
                     xanchor="right", x=0.99,
                     bgcolor="rgba(0,0,0,0)", borderwidth=0),
         margin=dict(t=50, r=20, b=40, l=50),
