@@ -249,7 +249,17 @@ with right:
             f"<span style='color:#8a8a8a'>▼ {_month(min_date)}</span></div>",
             unsafe_allow_html=True,
         )
-        st.plotly_chart(vi_line_chart(series, index=index),
+        # Tick boxes: choose which seasonal trend lines to show.
+        s1, s2, s3 = st.columns(3)
+        seasons = []
+        if s1.checkbox("Monsoon", value=True):
+            seasons.append("Monsoon")
+        if s2.checkbox("Dry-summer", value=True):
+            seasons.append("Dry-summer")
+        if s3.checkbox("Cool-dry", value=True):
+            seasons.append("Cool-dry")
+
+        st.plotly_chart(vi_line_chart(series, index=index, seasons=seasons),
                         use_container_width=True)
 
         # Indices table, underneath the chart.
