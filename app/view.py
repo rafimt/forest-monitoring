@@ -158,25 +158,49 @@ with left:
         fc = plots_fc if isinstance(plots_fc, dict) else json.loads(plots_fc)
         sel_ids = {plot_id}
 
-        def _style(feat):
-            sel = feat["properties"]["id"] in sel_ids
-            return {"color": "#c1272d" if sel else "#888",
-                    "weight": 3 if sel else 1,
-                    "fill": False, "fillOpacity": 0}
+        def _popup_table(p):
+            """A styled HTML table shown when a plot polygon is clicked."""
+            rows = [
+                ("Plot", p.get("name")),
+                ("Area (ha)", p.get("area_ha")),
+                ("Year", p.get("plant_year")),
+                ("Type", p.get("plant_type")),
+                ("Range", p.get("range_name")),
+                ("Beat", p.get("beat_name")),
+                ("Village", p.get("village")),
+                ("Division", p.get("division")),
+            ]
+            trs = "".join(
+                f"<tr>"
+                f"<td style='padding:3px 8px;color:#0b6b3a;font-weight:600;"
+                f"border-bottom:1px solid #eee'>{k}</td>"
+                f"<td style='padding:3px 8px;border-bottom:1px solid #eee'>"
+                f"{v if v not in (None, '') else '—'}</td></tr>"
+                for k, v in rows
+            )
+            return (
+                "<div style='font-family:system-ui,sans-serif;font-size:12px'>"
+                "<div style='font-weight:700;margin-bottom:4px;color:#0b6b3a'>"
+                "Plot details</div>"
+                f"<table style='border-collapse:collapse'>{trs}</table></div>"
+            )
 
-        folium.GeoJson(
-            fc, name="Plots", style_function=_style,
-            tooltip=folium.GeoJsonTooltip(fields=["name"], aliases=[""]),
-            # Click a polygon -> popup with key info.
-            popup=folium.GeoJsonPopup(
-                fields=["name", "area_ha", "plant_year", "plant_type",
-                        "range_name", "beat_name", "village", "division"],
-                aliases=["Plot", "Area (ha)", "Year", "Type",
-                         "Range", "Beat", "Village", "Division"],
-            ),
-        ).add_to(m)
         from shapely.geometry import shape as _shape
         from shapely.ops import unary_union
+        # Add each plot separately so every polygon gets its own table popup.
+        for feat in fc["features"]:
+            fid = feat["properties"]["id"]
+            sel = fid in sel_ids
+            folium.GeoJson(
+                feat,
+                style_function=lambda _f, sel=sel: {
+                    "color": "#c1272d" if sel else "#888",
+                    "weight": 3 if sel else 1,
+                    "fill": False, "fillOpacity": 0},
+                tooltip=feat["properties"]["name"],
+                popup=folium.Popup(_popup_table(feat["properties"]), max_width=280),
+            ).add_to(m)
+
         selfeats = [f for f in fc["features"] if f["properties"]["id"] in sel_ids]
         if selfeats:
             b = unary_union([_shape(f["geometry"]) for f in selfeats]).bounds
