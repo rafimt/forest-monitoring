@@ -104,6 +104,8 @@ with st.sidebar:
         plot_id = sel_row[0]
         plots_fc = get_plots_geojson(aoi_name)
 
+    idx_choice = st.selectbox("Vegetation index", list(idx_labels.keys()))
+    index = idx_labels[idx_choice]
     basemap = st.selectbox("Basemap", list(BASEMAPS.keys()))
 
 # ── Load data from PostGIS ───────────────────────────────────
@@ -179,31 +181,26 @@ with left:
               returned_objects=[], key="aoimap")
 
 with right:
-    # Fragment: changing the index reruns ONLY this block, never the map.
-    @st.fragment
-    def index_panel():
-        idx_choice = st.selectbox("Vegetation index", list(idx_labels.keys()))
-        index = idx_labels[idx_choice]
-
-        if not series:
-            st.info("No series stored for this selection.")
-            return
-
+    if not series:
+        st.info("No series stored for this selection.")
+    else:
         pts = [(r["date"], r[index]) for r in series if r[index] is not None]
         vals = [v for _, v in pts]
         peak_date, peak_val = max(pts, key=lambda p: p[1])
         min_date, min_val = min(pts, key=lambda p: p[1])
 
-        k1, k2, k3 = st.columns(3)
-        k1.metric(f"Avg {idx_choice}", f"{sum(vals)/len(vals):.3f}")
-        k2.metric("Peak", f"{peak_val:.3f}")
-        k2.caption(f"▲ {_month(peak_date)}")
-        k3.metric("Min", f"{min_val:.3f}")
-        k3.caption(f"▼ {_month(min_date)}")
-
-        st.plotly_chart(vi_line_chart(series, index=index), use_container_width=True)
-
-    index_panel()
+        # Compact one-line summary (small font, not big st.metric cards).
+        st.markdown(
+            f"<div style='font-size:0.9rem;line-height:1.4'>"
+            f"<b>Avg</b> {sum(vals)/len(vals):.3f} &nbsp;&nbsp;"
+            f"<b>Peak</b> {peak_val:.3f} "
+            f"<span style='color:#8a8a8a'>▲ {_month(peak_date)}</span> &nbsp;&nbsp;"
+            f"<b>Min</b> {min_val:.3f} "
+            f"<span style='color:#8a8a8a'>▼ {_month(min_date)}</span></div>",
+            unsafe_allow_html=True,
+        )
+        st.plotly_chart(vi_line_chart(series, index=index),
+                        use_container_width=True)
 
 # ── Data table (full width, centered) ────────────────────────
 if series:

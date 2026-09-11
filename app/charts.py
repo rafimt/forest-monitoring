@@ -61,8 +61,10 @@ def vi_line_chart(series, index="ndvi"):
         xaxis_title="Year", yaxis_title=label,
         yaxis_range=[lo - pad, hi + pad],
         hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
-        margin=dict(t=60, r=20, b=40, l=50),
+        height=430,                    # match the map height
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0,
+                    entrywidthmode="pixels", entrywidth=130),  # gap between items
+        margin=dict(t=70, r=20, b=40, l=50),
     )
     fig.update_xaxes(dtick=1)   # one tick per year
     if lo - pad < 0:
