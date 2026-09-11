@@ -64,7 +64,7 @@ def vi_line_chart(series, index="ndvi"):
         height=430,                    # match the map height
         legend=dict(orientation="v", yanchor="bottom", y=0.02,
                     xanchor="right", x=0.99,
-                    bgcolor="rgba(255,255,255,0.6)", borderwidth=0),
+                    bgcolor="rgba(0,0,0,0)", borderwidth=0),
         margin=dict(t=50, r=20, b=40, l=50),
     )
     fig.update_xaxes(dtick=1)   # one tick per year
