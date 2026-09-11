@@ -242,19 +242,14 @@ with right:
         st.plotly_chart(vi_line_chart(series, index=index),
                         use_container_width=True)
 
-# ── Data table (full width, centered) ────────────────────────
-if series:
-    tbl = pd.DataFrame(series)
-    tbl["date"] = pd.to_datetime(tbl["date"]).dt.strftime("%b %Y")
-    for col in ["ndvi", "evi", "savi", "ndre", "gndvi"]:
-        tbl[col] = tbl[col].round(3)
-    tbl = tbl.drop(columns=["n_images"], errors="ignore")
-    tbl = tbl.rename(columns={
-        "date": "Month", "ndvi": "NDVI", "evi": "EVI", "savi": "SAVI",
-        "ndre": "NDRE", "gndvi": "GNDVI",
-    })
-    st.divider()
-    _, mid, _ = st.columns([1, 2, 1])
-    with mid:
-        with st.expander("Show data table"):
-            st.dataframe(tbl, use_container_width=True, hide_index=True)
+        # Indices table, underneath the chart.
+        tbl = pd.DataFrame(series)
+        tbl["date"] = pd.to_datetime(tbl["date"]).dt.strftime("%b %Y")
+        for col in ["ndvi", "evi", "savi", "ndre", "gndvi"]:
+            tbl[col] = tbl[col].round(3)
+        tbl = tbl.drop(columns=["n_images"], errors="ignore")
+        tbl = tbl.rename(columns={
+            "date": "Month", "ndvi": "NDVI", "evi": "EVI", "savi": "SAVI",
+            "ndre": "NDRE", "gndvi": "GNDVI",
+        })
+        st.dataframe(tbl, use_container_width=True, hide_index=True)
