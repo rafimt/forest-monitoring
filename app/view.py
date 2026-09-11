@@ -245,9 +245,9 @@ with right:
         peak_date, peak_val = max(pts, key=lambda p: p[1])
         min_date, min_val = min(pts, key=lambda p: p[1])
 
-        # Compact one-line summary (small font, not big st.metric cards).
+        # Compact one-line summary, centered over the chart.
         st.markdown(
-            f"<div style='font-size:0.9rem;line-height:1.4'>"
+            f"<div style='font-size:0.9rem;line-height:1.4;text-align:center'>"
             f"<b>Avg</b> {sum(vals)/len(vals):.3f} &nbsp;&nbsp;"
             f"<b>Peak</b> {peak_val:.3f} "
             f"<span style='color:#8a8a8a'>▲ {_month(peak_date)}</span> &nbsp;&nbsp;"
