@@ -62,9 +62,11 @@ def vi_line_chart(series, index="ndvi"):
         yaxis_range=[lo - pad, hi + pad],
         hovermode="x unified",
         height=430,                    # match the map height
-        legend=dict(orientation="v", yanchor="middle", y=0.11,
+        legend=dict(orientation="v", yanchor="middle", y=0.10,
                     xanchor="right", x=0.99,
-                    bgcolor="rgba(0,0,0,0)", borderwidth=0),
+                    bgcolor="rgba(0,0,0,0)", borderwidth=0,
+                    font=dict(size=10),      # small so all 3 fit in the 0–0.2 band
+                    itemsizing="constant"),
         margin=dict(t=50, r=20, b=40, l=50),
     )
     fig.update_xaxes(dtick=1)   # one tick per year
