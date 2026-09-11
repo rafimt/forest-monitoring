@@ -132,21 +132,6 @@ if attrs:
         f"**Village** {attrs.get('village') or '—'}  ·  "
         f"**Division** {attrs.get('division') or '—'}"
     )
-    # Same info as a table (also available by clicking the polygon on the map).
-    with st.expander("Plot info (table)"):
-        info = pd.DataFrame(
-            [
-                ("Area (ha)", area),
-                ("Plant year", attrs.get("plant_year") or "—"),
-                ("Plant type", attrs.get("plant_type") or "—"),
-                ("Range", attrs.get("range_name") or "—"),
-                ("Beat", attrs.get("beat_name") or "—"),
-                ("Village", attrs.get("village") or "—"),
-                ("Division", attrs.get("division") or "—"),
-            ],
-            columns=["Attribute", "Value"],
-        )
-        st.dataframe(info, use_container_width=True, hide_index=True)
 
 # ── Map + index panel side by side ───────────────────────────
 left, right = st.columns([1, 1])
@@ -218,6 +203,22 @@ with left:
     # Stable key -> the map updates in place instead of remounting (no blink).
     st_folium(m, use_container_width=True, height=430,
               returned_objects=[], key="aoimap")
+
+    # Plot info table, underneath the map.
+    if attrs:
+        info = pd.DataFrame(
+            [
+                ("Area (ha)", f"{attrs.get('area_ha'):.2f}" if attrs.get("area_ha") else "—"),
+                ("Plant year", attrs.get("plant_year") or "—"),
+                ("Plant type", attrs.get("plant_type") or "—"),
+                ("Range", attrs.get("range_name") or "—"),
+                ("Beat", attrs.get("beat_name") or "—"),
+                ("Village", attrs.get("village") or "—"),
+                ("Division", attrs.get("division") or "—"),
+            ],
+            columns=["Attribute", "Value"],
+        )
+        st.dataframe(info, use_container_width=True, hide_index=True)
 
 with right:
     if not series:
