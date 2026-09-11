@@ -53,9 +53,10 @@ def get_plot_series(plot_id):
 
 st.set_page_config(page_title="Vegetation Index Viewer", page_icon="🌱", layout="wide")
 
-# Trim Streamlit's large default top padding so the header sits near the top.
+# Trim Streamlit's large default top padding so the header sits near the top
+# (but leave room so it isn't clipped by the top toolbar).
 st.markdown(
-    "<style>.block-container{padding-top:1.2rem;}</style>",
+    "<style>.block-container{padding-top:2.5rem;}</style>",
     unsafe_allow_html=True,
 )
 
