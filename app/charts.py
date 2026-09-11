@@ -27,10 +27,12 @@ SEASON_COLORS = {
 }
 
 
-def vi_line_chart(series, index="ndvi"):
+def vi_line_chart(series, index="ndvi", seasons=None):
     """Seasonal yearly-median chart: one line per season (Monsoon, Dry-summer,
-    Cool-dry), each point = median of that season's months in that year."""
+    Cool-dry), each point = median of that season's months in that year.
+    `seasons` (list) limits which lines are drawn; None = all."""
     label = INDICES[index][0]
+    show = set(seasons) if seasons else set(SEASON_COLORS)
     df = pd.DataFrame(series)
     if df.empty or "date" not in df:
         return go.Figure().update_layout(title=f"{label} — no data")
@@ -45,6 +47,8 @@ def vi_line_chart(series, index="ndvi"):
     fig = go.Figure()
     lo, hi = 0.0, 0.0
     for season, color in SEASON_COLORS.items():
+        if season not in show:
+            continue
         d = grp[grp["season"] == season].sort_values("year")
         if d.empty:
             continue
