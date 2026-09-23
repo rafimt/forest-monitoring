@@ -259,7 +259,7 @@ with left:
     # Stable key -> the map updates in place instead of remounting (no blink).
     # Capture polygon clicks (tooltip = plot name) so clicking selects a plot.
     map_out = st_folium(
-        m, use_container_width=True, height=560, key="aoimap",
+        m, use_container_width=True, height=420, key="aoimap",
         returned_objects=["last_object_clicked_tooltip"],
     )
     if plots_fc and map_out:

@@ -67,7 +67,7 @@ def vi_line_chart(series, index="ndvi", seasons=None):
         xaxis_title="Year", yaxis_title=label,
         yaxis_range=[lo - pad, hi + pad],
         hovermode="x unified",
-        height=520,                    # match the map height
+        height=420,                    # match the map height
         legend=dict(orientation="v", yanchor="middle", y=0.10,
                     xanchor="right", x=0.99,
                     bgcolor="rgba(0,0,0,0)", borderwidth=0,
