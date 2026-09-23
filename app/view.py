@@ -150,17 +150,6 @@ with st.sidebar:
     _default_bm = _bm.index("Esri Satellite") if "Esri Satellite" in _bm else 0
     basemap = st.selectbox("Basemap", _bm, index=_default_bm)
 
-    with st.expander("About the indices"):
-        st.markdown(
-            "All indices range from **−1 to +1**; healthy dense vegetation is "
-            "typically **0.6–0.9**.\n\n"
-            "- **NDVI** — overall greenness `(NIR − Red)/(NIR + Red)`.\n"
-            "- **EVI** — corrects atmosphere & canopy saturation.\n"
-            "- **SAVI** — reduces bare-soil influence (sparse/young plots).\n"
-            "- **NDRE** — red-edge; early stress, dense canopies.\n"
-            "- **GNDVI** — green band; chlorophyll & water/fertilizer stress."
-        )
-
 # ── Load data from PostGIS ───────────────────────────────────
 if plot_id:
     geojson_str = None                       # map drawn from plots_fc below
