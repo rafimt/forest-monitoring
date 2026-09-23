@@ -143,6 +143,7 @@ with st.sidebar:
         seasons.append("Dry-summer")
     if st.checkbox("Cool-dry", value=True):
         seasons.append("Cool-dry")
+    st.caption("Monsoon: Jun–Oct · Dry-summer: Mar–May · Cool-dry: Nov–Feb")
 
     _bm = list(BASEMAPS.keys())
     _default_bm = _bm.index("Esri Satellite") if "Esri Satellite" in _bm else 0
@@ -165,9 +166,22 @@ else:
 # ── Compact header: AOI name + one-line description of the selected index ──
 st.subheader(f"🌱 {aoi_choice}")
 st.caption(f"**{idx_choice}** — {INDICES[index][1]}")
+with st.expander("About the indices"):
+    st.markdown(
+        "- **NDVI** — Normalized Difference Vegetation Index: overall greenness "
+        "`(NIR − Red) / (NIR + Red)`.\n"
+        "- **EVI** — Enhanced Vegetation Index: like NDVI but corrects for "
+        "atmosphere and canopy saturation in dense vegetation.\n"
+        "- **SAVI** — Soil Adjusted Vegetation Index: reduces bare-soil influence, "
+        "good for sparse or young plantations.\n"
+        "- **NDRE** — Normalized Difference Red Edge: uses the red-edge band to "
+        "spot early stress and monitor dense canopies where NDVI saturates.\n"
+        "- **GNDVI** — Green NDVI: uses green instead of red to track chlorophyll "
+        "and early water/fertilizer stress."
+    )
 
-# ── Map + index panel side by side ───────────────────────────
-left, right = st.columns([1, 1])
+# ── Map + index panel side by side (map gets more space) ─────
+left, right = st.columns([1.4, 1])
 
 with left:
     m = make_map(basemap=basemap)
@@ -219,6 +233,22 @@ with left:
                 popup=folium.Popup(_popup_table(feat["properties"]), max_width=280),
             ).add_to(m)
 
+        # Beat name labels: one small label at each beat's centroid.
+        beats_geom = {}
+        for feat in fc["features"]:
+            bn = feat["properties"].get("beat_name")
+            if bn:
+                beats_geom.setdefault(bn, []).append(_shape(feat["geometry"]))
+        for bn, geoms in beats_geom.items():
+            c = unary_union(geoms).centroid
+            folium.Marker(
+                [c.y, c.x],
+                icon=folium.DivIcon(html=(
+                    "<div style='font-size:10px;font-weight:600;color:#111;"
+                    "white-space:nowrap;text-shadow:0 0 2px #fff,0 0 2px #fff'>"
+                    f"{bn}</div>")),
+            ).add_to(m)
+
         selfeats = [f for f in fc["features"] if f["properties"]["id"] in sel_ids]
         if selfeats:
             b = unary_union([_shape(f["geometry"]) for f in selfeats]).bounds
@@ -236,7 +266,7 @@ with left:
     # Stable key -> the map updates in place instead of remounting (no blink).
     # Capture polygon clicks (tooltip = plot name) so clicking selects a plot.
     map_out = st_folium(
-        m, use_container_width=True, height=430, key="aoimap",
+        m, use_container_width=True, height=560, key="aoimap",
         returned_objects=["last_object_clicked_tooltip"],
     )
     if plots_fc and map_out:
@@ -273,6 +303,15 @@ with right:
         peak_date, peak_val = max(pts, key=lambda p: p[1])
         min_date, min_val = min(pts, key=lambda p: p[1])
 
+        # Encroachment index: change between the earliest and most recent
+        # ~12 months (median). Negative = vegetation loss (possible encroachment).
+        import statistics as _stat
+        early = _stat.median(vals[:12]) if len(vals) >= 2 else vals[0]
+        recent = _stat.median(vals[-12:]) if len(vals) >= 2 else vals[0]
+        enc = recent - early
+        enc_color = "#c1272d" if enc < -0.02 else ("#1a9850" if enc > 0.02 else "#8a8a8a")
+        enc_arrow = "▼" if enc < 0 else "▲"
+
         # Compact one-line summary, centered over the chart.
         st.markdown(
             f"<div style='font-size:0.9rem;line-height:1.4;text-align:center'>"
@@ -280,7 +319,9 @@ with right:
             f"<b>Peak</b> {peak_val:.3f} "
             f"<span style='color:#8a8a8a'>▲ {_month(peak_date)}</span> &nbsp;&nbsp;"
             f"<b>Min</b> {min_val:.3f} "
-            f"<span style='color:#8a8a8a'>▼ {_month(min_date)}</span></div>",
+            f"<span style='color:#8a8a8a'>▼ {_month(min_date)}</span> &nbsp;&nbsp;"
+            f"<b>Encroach.</b> <span style='color:{enc_color}'>"
+            f"{enc_arrow} {enc:+.3f}</span></div>",
             unsafe_allow_html=True,
         )
         st.plotly_chart(vi_line_chart(series, index=index, seasons=seasons),
