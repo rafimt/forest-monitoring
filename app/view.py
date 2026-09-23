@@ -120,6 +120,18 @@ with st.sidebar:
         plot_id = sel_row[0]
         plots_fc = get_plots_geojson(aoi_name)
 
+        # If the user changed a dropdown, drop any map-click override.
+        dd_sig = (aoi_id, sel_range, sel_beat, plot_id)
+        if st.session_state.get("_dd_sig") != dd_sig:
+            st.session_state["_dd_sig"] = dd_sig
+            st.session_state.pop("_click_plot", None)
+        # Apply a map-click selection (set on a previous run) if still valid.
+        cp = st.session_state.get("_click_plot")
+        if cp is not None:
+            match = next((p for p in plots if p[0] == cp), None)
+            if match:
+                sel_row, plot_id = match, match[0]
+
     idx_choice = st.selectbox("Vegetation index", list(idx_labels.keys()))
     index = idx_labels[idx_choice]
 
@@ -150,8 +162,9 @@ else:
     series = get_series(aoi_id)
     attrs = None
 
-# ── Compact header: AOI name (details are in the Plot info table + popup) ──
+# ── Compact header: AOI name + one-line description of the selected index ──
 st.subheader(f"🌱 {aoi_choice}")
+st.caption(f"**{idx_choice}** — {INDICES[index][1]}")
 
 # ── Map + index panel side by side ───────────────────────────
 left, right = st.columns([1, 1])
@@ -199,7 +212,7 @@ with left:
             folium.GeoJson(
                 feat,
                 style_function=lambda _f, sel=sel: {
-                    "color": "#c1272d" if sel else "#888",
+                    "color": "#c1272d" if sel else "#000000",
                     "weight": 3 if sel else 1,
                     "fill": False, "fillOpacity": 0},
                 tooltip=feat["properties"]["name"],
@@ -221,8 +234,18 @@ with left:
         m.fit_bounds([[miny, minx], [maxy, maxx]])
 
     # Stable key -> the map updates in place instead of remounting (no blink).
-    st_folium(m, use_container_width=True, height=430,
-              returned_objects=[], key="aoimap")
+    # Capture polygon clicks (tooltip = plot name) so clicking selects a plot.
+    map_out = st_folium(
+        m, use_container_width=True, height=430, key="aoimap",
+        returned_objects=["last_object_clicked_tooltip"],
+    )
+    if plots_fc and map_out:
+        clicked_name = map_out.get("last_object_clicked_tooltip")
+        if clicked_name:
+            match = next((p for p in plots if p[1] == clicked_name), None)
+            if match and match[0] != st.session_state.get("_click_plot"):
+                st.session_state["_click_plot"] = match[0]
+                st.rerun()
 
     # Plot info table, underneath the map.
     if attrs:
