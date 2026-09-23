@@ -219,34 +219,39 @@ with left:
 
         from shapely.geometry import shape as _shape
         from shapely.ops import unary_union
-        # Add each plot separately so every polygon gets its own table popup.
+        # Label each plot as "<beat>_Plot N" (N numbered within its beat).
+        label_by_id = {}
+        _by_beat = {}
+        for feat in sorted(fc["features"], key=lambda f: f["properties"]["name"]):
+            bn = feat["properties"].get("beat_name") or "?"
+            _by_beat.setdefault(bn, []).append(feat)
+        for bn, feats in _by_beat.items():
+            for i, feat in enumerate(feats, 1):
+                label_by_id[feat["properties"]["id"]] = f"{bn}_Plot {i}"
+        id_by_label = {v: k for k, v in label_by_id.items()}
+
+        # Add each plot separately: outline + centre label + hover + popup.
         for feat in fc["features"]:
             fid = feat["properties"]["id"]
             sel = fid in sel_ids
+            label = label_by_id[fid]
             folium.GeoJson(
                 feat,
                 style_function=lambda _f, sel=sel: {
                     "color": "#c1272d" if sel else "#000000",
                     "weight": 3,
                     "fill": False, "fillOpacity": 0},
-                tooltip=feat["properties"]["name"],
+                tooltip=label,   # hover shows the same beat_Plot label
                 popup=folium.Popup(_popup_table(feat["properties"]), max_width=280),
             ).add_to(m)
-
-        # Beat name labels: one small label at each beat's centroid.
-        beats_geom = {}
-        for feat in fc["features"]:
-            bn = feat["properties"].get("beat_name")
-            if bn:
-                beats_geom.setdefault(bn, []).append(_shape(feat["geometry"]))
-        for bn, geoms in beats_geom.items():
-            c = unary_union(geoms).centroid
+            # Label in the middle of the polygon.
+            c = _shape(feat["geometry"]).centroid
             folium.Marker(
                 [c.y, c.x],
                 icon=folium.DivIcon(html=(
                     "<div style='font-size:10px;font-weight:600;color:#111;"
                     "white-space:nowrap;text-shadow:0 0 2px #fff,0 0 2px #fff'>"
-                    f"{bn}</div>")),
+                    f"{label}</div>")),
             ).add_to(m)
 
         selfeats = [f for f in fc["features"] if f["properties"]["id"] in sel_ids]
@@ -270,12 +275,11 @@ with left:
         returned_objects=["last_object_clicked_tooltip"],
     )
     if plots_fc and map_out:
-        clicked_name = map_out.get("last_object_clicked_tooltip")
-        if clicked_name:
-            match = next((p for p in plots if p[1] == clicked_name), None)
-            if match and match[0] != st.session_state.get("_click_plot"):
-                st.session_state["_click_plot"] = match[0]
-                st.rerun()
+        clicked_label = map_out.get("last_object_clicked_tooltip")
+        clicked_id = id_by_label.get((clicked_label or "").strip())
+        if clicked_id and clicked_id != st.session_state.get("_click_plot"):
+            st.session_state["_click_plot"] = clicked_id
+            st.rerun()
 
     # Plot info table, underneath the map.
     if attrs:
@@ -303,15 +307,6 @@ with right:
         peak_date, peak_val = max(pts, key=lambda p: p[1])
         min_date, min_val = min(pts, key=lambda p: p[1])
 
-        # Encroachment index: change between the earliest and most recent
-        # ~12 months (median). Negative = vegetation loss (possible encroachment).
-        import statistics as _stat
-        early = _stat.median(vals[:12]) if len(vals) >= 2 else vals[0]
-        recent = _stat.median(vals[-12:]) if len(vals) >= 2 else vals[0]
-        enc = recent - early
-        enc_color = "#c1272d" if enc < -0.02 else ("#1a9850" if enc > 0.02 else "#8a8a8a")
-        enc_arrow = "▼" if enc < 0 else "▲"
-
         # Compact one-line summary, centered over the chart.
         st.markdown(
             f"<div style='font-size:0.9rem;line-height:1.4;text-align:center'>"
@@ -319,9 +314,7 @@ with right:
             f"<b>Peak</b> {peak_val:.3f} "
             f"<span style='color:#8a8a8a'>▲ {_month(peak_date)}</span> &nbsp;&nbsp;"
             f"<b>Min</b> {min_val:.3f} "
-            f"<span style='color:#8a8a8a'>▼ {_month(min_date)}</span> &nbsp;&nbsp;"
-            f"<b>Encroach.</b> <span style='color:{enc_color}'>"
-            f"{enc_arrow} {enc:+.3f}</span></div>",
+            f"<span style='color:#8a8a8a'>▼ {_month(min_date)}</span></div>",
             unsafe_allow_html=True,
         )
         st.plotly_chart(vi_line_chart(series, index=index, seasons=seasons),
