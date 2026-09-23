@@ -165,9 +165,11 @@ else:
 
 # ── Compact header: AOI name + one-line description of the selected index ──
 st.subheader(f"🌱 {aoi_choice}")
-st.caption(f"**{idx_choice}** — {INDICES[index][1]}")
+st.caption(f"**{idx_choice}** — {INDICES[index][1]} (range −1 to +1)")
 with st.expander("About the indices"):
     st.markdown(
+        "All indices range from **−1 to +1**; healthy dense vegetation is "
+        "typically **0.6–0.9**.\n\n"
         "- **NDVI** — Normalized Difference Vegetation Index: overall greenness "
         "`(NIR − Red) / (NIR + Red)`.\n"
         "- **EVI** — Enhanced Vegetation Index: like NDVI but corrects for "
