@@ -308,18 +308,15 @@ with right:
         st.plotly_chart(vi_line_chart(series, index=index, seasons=seasons),
                         use_container_width=True)
 
-# ── Indices table (centered in the middle of the page) ───────
-if series:
-    tbl = pd.DataFrame(series)
-    tbl["date"] = pd.to_datetime(tbl["date"]).dt.strftime("%b %Y")
-    for col in ["ndvi", "evi", "savi", "ndre", "gndvi"]:
-        tbl[col] = tbl[col].round(3)
-    tbl = tbl.drop(columns=["n_images"], errors="ignore")
-    tbl = tbl.rename(columns={
-        "date": "Month", "ndvi": "NDVI", "evi": "EVI", "savi": "SAVI",
-        "ndre": "NDRE", "gndvi": "GNDVI",
-    })
-    _, mid, _ = st.columns([1, 2, 1])
-    with mid:
+        # Indices table, under the chart (right column).
+        tbl = pd.DataFrame(series)
+        tbl["date"] = pd.to_datetime(tbl["date"]).dt.strftime("%b %Y")
+        for col in ["ndvi", "evi", "savi", "ndre", "gndvi"]:
+            tbl[col] = tbl[col].round(3)
+        tbl = tbl.drop(columns=["n_images"], errors="ignore")
+        tbl = tbl.rename(columns={
+            "date": "Month", "ndvi": "NDVI", "evi": "EVI", "savi": "SAVI",
+            "ndre": "NDRE", "gndvi": "GNDVI",
+        })
         with st.expander("Indices table", expanded=False):
             st.dataframe(tbl, use_container_width=True, hide_index=True)
