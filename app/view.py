@@ -58,7 +58,7 @@ st.set_page_config(page_title="Vegetation Index Viewer", page_icon="🌱", layou
 st.markdown(
     "<style>.block-container{padding-top:1.2rem;padding-left:1.5rem;"
     "padding-right:1.5rem;}"
-    "h3{margin-top:0;padding-top:0;}</style>",
+    "h3{margin-top:0;padding-top:0;font-size:1.35rem;}</style>",
     unsafe_allow_html=True,
 )
 
