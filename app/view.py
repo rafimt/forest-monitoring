@@ -227,7 +227,7 @@ with left:
                 feat,
                 style_function=lambda _f, sel=sel: {
                     "color": "#c1272d" if sel else "#000000",
-                    "weight": 3 if sel else 1,
+                    "weight": 3,
                     "fill": False, "fillOpacity": 0},
                 tooltip=feat["properties"]["name"],
                 popup=folium.Popup(_popup_table(feat["properties"]), max_width=280),
