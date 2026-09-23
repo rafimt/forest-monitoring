@@ -56,8 +56,9 @@ st.set_page_config(page_title="Vegetation Index Viewer", page_icon="🌱", layou
 # Trim Streamlit's large default top padding so the header sits near the top
 # (but leave room so it isn't clipped by the top toolbar).
 st.markdown(
-    "<style>.block-container{padding-top:2.5rem;padding-left:1.5rem;"
-    "padding-right:1.5rem;}</style>",
+    "<style>.block-container{padding-top:1.2rem;padding-left:1.5rem;"
+    "padding-right:1.5rem;}"
+    "h3{margin-top:0;padding-top:0;}</style>",
     unsafe_allow_html=True,
 )
 
@@ -149,6 +150,17 @@ with st.sidebar:
     _default_bm = _bm.index("Esri Satellite") if "Esri Satellite" in _bm else 0
     basemap = st.selectbox("Basemap", _bm, index=_default_bm)
 
+    with st.expander("About the indices"):
+        st.markdown(
+            "All indices range from **−1 to +1**; healthy dense vegetation is "
+            "typically **0.6–0.9**.\n\n"
+            "- **NDVI** — overall greenness `(NIR − Red)/(NIR + Red)`.\n"
+            "- **EVI** — corrects atmosphere & canopy saturation.\n"
+            "- **SAVI** — reduces bare-soil influence (sparse/young plots).\n"
+            "- **NDRE** — red-edge; early stress, dense canopies.\n"
+            "- **GNDVI** — green band; chlorophyll & water/fertilizer stress."
+        )
+
 # ── Load data from PostGIS ───────────────────────────────────
 if plot_id:
     geojson_str = None                       # map drawn from plots_fc below
@@ -166,21 +178,6 @@ else:
 # ── Compact header: AOI name + one-line description of the selected index ──
 st.subheader(f"🌱 {aoi_choice}")
 st.caption(f"**{idx_choice}** — {INDICES[index][1]} (range −1 to +1)")
-with st.expander("About the indices"):
-    st.markdown(
-        "All indices range from **−1 to +1**; healthy dense vegetation is "
-        "typically **0.6–0.9**.\n\n"
-        "- **NDVI** — Normalized Difference Vegetation Index: overall greenness "
-        "`(NIR − Red) / (NIR + Red)`.\n"
-        "- **EVI** — Enhanced Vegetation Index: like NDVI but corrects for "
-        "atmosphere and canopy saturation in dense vegetation.\n"
-        "- **SAVI** — Soil Adjusted Vegetation Index: reduces bare-soil influence, "
-        "good for sparse or young plantations.\n"
-        "- **NDRE** — Normalized Difference Red Edge: uses the red-edge band to "
-        "spot early stress and monitor dense canopies where NDVI saturates.\n"
-        "- **GNDVI** — Green NDVI: uses green instead of red to track chlorophyll "
-        "and early water/fertilizer stress."
-    )
 
 # ── Map + index panel side by side (map gets more space) ─────
 left, right = st.columns([1.4, 1])
