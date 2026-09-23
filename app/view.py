@@ -228,7 +228,9 @@ with left:
                 style_function=lambda _f, sel=sel: {
                     "color": "#c1272d" if sel else "#000000",
                     "weight": 3,
-                    "fill": False, "fillOpacity": 0},
+                    # Transparent fill -> the whole interior is clickable,
+                    # not just the boundary line.
+                    "fill": True, "fillColor": "#ffffff", "fillOpacity": 0.01},
                 tooltip=label,   # hover shows the same beat_Plot label
                 popup=folium.Popup(_popup_table(feat["properties"]), max_width=280),
             ).add_to(m)
