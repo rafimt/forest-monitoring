@@ -4,7 +4,24 @@ from sqlalchemy import create_engine, text
 
 from app.config import settings
 
-engine = create_engine(settings.database_url, pool_pre_ping=True)
+
+def _normalize_url(url: str) -> str:
+    """Force the psycopg2 driver (that's what we install: psycopg2-binary).
+    Supabase/Streamlit secrets sometimes use the psycopg v3 scheme
+    (postgresql+psycopg://) or the legacy postgres:// scheme, which would make
+    SQLAlchemy import a driver that isn't installed."""
+    if not url:
+        return url
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if url.startswith("postgresql+psycopg://"):
+        url = "postgresql+psycopg2://" + url[len("postgresql+psycopg://"):]
+    elif url.startswith("postgresql://"):
+        url = "postgresql+psycopg2://" + url[len("postgresql://"):]
+    return url
+
+
+engine = create_engine(_normalize_url(settings.database_url), pool_pre_ping=True)
 
 
 def query(sql: str, params=None) -> pd.DataFrame:
